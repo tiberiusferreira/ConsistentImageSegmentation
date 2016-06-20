@@ -331,57 +331,57 @@ def objects_detector(img_bgr8):
     global img_clean_GRAY_class
     img_clean_GRAY_class = cv2.cvtColor(img_clean_BGR_class, cv2.COLOR_BGR2GRAY)
     cv2.imshow('Clean', img_clean_BGR_class)
-    # img_bgr8_copy = img_bgr8.copy()
-    # hsv = cv2.cvtColor(img_bgr8_copy, cv2.COLOR_RGB2HSV)
-    # # define the values range
-    # hh = 255
-    # hl = 0
-    # sh = 255
-    # sl = 40  # filter the white color background
-    # vh = 255
-    # vl = 0  # to ignore the black in the background
-    # lowerbound = np.array([hl, sl, vl], np.uint8)
-    # upperbound = np.array([hh, sh, vh], np.uint8)
-    # # filter the image to generate the mask
-    # filtered_hsv = cv2.inRange(hsv, lowerbound, upperbound)
-    # filtered_hsv = cv2.bitwise_and(hsv, hsv, mask=filtered_hsv)
-    # cv2.imshow('Filtered', filtered_hsv)
-    # cv2.waitKey(1)
-    # # convert the image to grayscale in order to find contours
-    # img_bgr = cv2.cvtColor(filtered_hsv, cv2.COLOR_HSV2BGR)
-    # img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    # img_gray = cv2.medianBlur(img_gray,3)
-    # # img_gray = cv2.bilateralFilter(img_gray, 25, 4, 20)
-    # # ret, img_gray = cv2.threshold(img_gray, 50, 255, cv2.THRESH_BINARY)
-    # cv2.imshow('Filtered grayscale', img_gray)
-    # cv2.waitKey(1)
-    # img_gray_copy = img_gray.copy()
-    # im2, contours, hierarchy = cv2.findContours(img_gray_copy.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    # # Find the index of the largest contour
-    # if not contours:
-    #     print 'No contours found =('
-    #     return
-    # areas = [cv2.contourArea(c) for c in contours]
-    # max_index = np.argmax(areas)
-    # cnt = contours[max_index]
-    # # epsilon = 0.005 * cv2.arcLength(cnt, True)
-    # # cnt = cv2.approxPolyDP(cnt, epsilon, True)
-    # height, width, channels = img_bgr8_copy.shape
-    # contour_img = img_bgr8_copy.copy()
-    # cv2.drawContours(contour_img, cnt, -1, (0, 255, 0), 3)
-    # x, y, width, height = cv2.boundingRect(cnt)
-    # contour_img_box = contour_img.copy()
-    # cv2.imshow('Contour', contour_img_box)
-    # cv2.waitKey(1)
-    # cropped_bgr8 = img_bgr8_copy[y:y + height, x:x + width]
-    # cv2.imshow('zica', cropped_bgr8)
-    # cropped_gray = cv2.cvtColor(cropped_bgr8, cv2.COLOR_BGR2GRAY)
-    # cropped_gray = cv2.resize(cropped_gray, (100, 100), interpolation=cv2.INTER_AREA)  # resize image
-    # cv2.imshow('CropGray', cropped_gray)
-    # fd, hog_image = hog(img_clean_GRAY, orientations=n_bin, pixels_per_cell=(c_size, c_size),
-    #                     cells_per_block=(b_size / c_size, b_size / c_size), visualise=True)
-    # hog_image = exposure.rescale_intensity(hog_image, in_range=(0, 4))
-    # cv2.imshow('HOGG', hog_image)
+    img_bgr8_copy = img_bgr8.copy()
+    hsv = cv2.cvtColor(img_bgr8_copy, cv2.COLOR_RGB2HSV)
+    # define the values range
+    hh = 255
+    hl = 0
+    sh = 255
+    sl = 40  # filter the white color background
+    vh = 255
+    vl = 0  # to ignore the black in the background
+    lowerbound = np.array([hl, sl, vl], np.uint8)
+    upperbound = np.array([hh, sh, vh], np.uint8)
+    # filter the image to generate the mask
+    filtered_hsv = cv2.inRange(hsv, lowerbound, upperbound)
+    filtered_hsv = cv2.bitwise_and(hsv, hsv, mask=filtered_hsv)
+    cv2.imshow('Filtered', filtered_hsv)
+    cv2.waitKey(1)
+    # convert the image to grayscale in order to find contours
+    img_bgr = cv2.cvtColor(filtered_hsv, cv2.COLOR_HSV2BGR)
+    img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    img_gray = cv2.medianBlur(img_gray,3)
+    # img_gray = cv2.bilateralFilter(img_gray, 25, 4, 20)
+    # ret, img_gray = cv2.threshold(img_gray, 50, 255, cv2.THRESH_BINARY)
+    cv2.imshow('Filtered grayscale', img_gray)
+    cv2.waitKey(1)
+    img_gray_copy = img_gray.copy()
+    im2, contours, hierarchy = cv2.findContours(img_gray_copy.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    # Find the index of the largest contour
+    if not contours:
+        print ('No contours found =(')
+        return
+    areas = [cv2.contourArea(c) for c in contours]
+    max_index = np.argmax(areas)
+    cnt = contours[max_index]
+    # epsilon = 0.005 * cv2.arcLength(cnt, True)
+    # cnt = cv2.approxPolyDP(cnt, epsilon, True)
+    height, width, channels = img_bgr8_copy.shape
+    contour_img = img_bgr8_copy.copy()
+    cv2.drawContours(contour_img, cnt, -1, (0, 255, 0), 3)
+    x, y, width, height = cv2.boundingRect(cnt)
+    contour_img_box = contour_img.copy()
+    cv2.imshow('Contour', cv2.resize(contour_img_box, (256, 256)))
+    cv2.waitKey(1)
+    cropped_bgr8 = img_bgr8_copy[y:y + height, x:x + width]
+    cv2.imshow('zica', cropped_bgr8)
+    cropped_gray = cv2.cvtColor(cropped_bgr8, cv2.COLOR_BGR2GRAY)
+    cropped_gray = cv2.resize(cropped_gray, (100, 100), interpolation=cv2.INTER_AREA)  # resize image
+    cv2.imshow('CropGray', cropped_gray)
+    fd, hog_image = hog(img_clean_GRAY_class, orientations=n_bin, pixels_per_cell=(c_size, c_size),
+                        cells_per_block=(b_size / c_size, b_size / c_size), visualise=True)
+    hog_image = exposure.rescale_intensity(hog_image, in_range=(0, 4))
+    cv2.imshow('HOGG', hog_image)
     global clf
     global last_hog
     global n_bin
