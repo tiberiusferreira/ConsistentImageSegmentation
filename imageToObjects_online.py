@@ -228,10 +228,15 @@ def hog_pred(value):
     global B_SIZE
     global C_SIZE
     global img_clean_GRAY_class
-    fd = hog(img_clean_GRAY_class, orientations=N_BIN, pixels_per_cell=(C_SIZE, C_SIZE),
-             cells_per_block=(B_SIZE / C_SIZE, B_SIZE / C_SIZE), visualise=False)
+    opencv_hog = cv2.HOGDescriptor((128, 128), (B_SIZE, B_SIZE), (B_STRIDE, B_STRIDE), (C_SIZE, C_SIZE), N_BIN)
+    fd = opencv_hog.compute(img_clean_GRAY_class)
+    fd = np.reshape(fd, (len(fd),))
+    fd = fd.reshape(1, -1)
+    print (fd)
+    print (np.shape(fd))
     global CLF
-    print (CLF.predict([fd]))
+    print (CLF.predict(fd))
+    print (CLF.predict_proba(fd))
 
 
 def load_class(value):
@@ -242,41 +247,9 @@ def load_class(value):
         hog_tuple = pickle.load(f)
     HOG_LIST = hog_tuple[0]
     LABELS = hog_tuple[1]
-    # print (clf)
     global LOADED
     LOADED = 1
     print ('Loaded')
-    SIZE = 6000
-    print (np.shape(np.array(HOG_LIST)))
-    print (np.shape(np.array(LABELS)))
-    classes = np.unique(LABELS).tolist()
-    i = 0
-    print (classes)
-    print (len(classes))
-    print (np.shape(HOG_LIST)[1])
-    np.set_printoptions(threshold=np.nan)
-    NEW_HOG = np.zeros((20, np.shape(HOG_LIST)[1]))
-    print (np.shape(NEW_HOG))
-    pos_label = -1
-    for single_label in classes:  # 20 iterations
-        pos_label += 1
-        elements_added = 0
-        elements_passed = 0
-        for element in LABELS:  # for all hogs
-            if element == single_label:
-                NEW_HOG[pos_label] += HOG_LIST[elements_passed]
-                # print (NEW_HOG[pos_label])
-                elements_added += 1
-            elements_passed += 1
-        NEW_HOG[pos_label] /= elements_added
-    print (np.shape(NEW_HOG))
-    print (np.shape(classes))
-
-    # print (NEW_HOG)
-    # print (HOG_LIST[10])
-    HOG_LIST = NEW_HOG
-    LABELS = classes
-    CLF.fit(HOG_LIST, LABELS)
 
 
 
@@ -345,6 +318,7 @@ def learn(value):
     print ('Learning')
     start_time = time.time()
     global HOG_LIST
+    global LABELS
     classes = np.unique(LABELS).tolist()
     if IMPLEMENTS_P_FIT == 1:
         for i in range(10):
@@ -550,6 +524,10 @@ def get_img_rot(img_bgr):
         h1 = opencv_hog.compute(img_clean_gray_class_local)
         fd = np.reshape(h1, (len(h1),))
         fd = fd.reshape(1, -1)
+        # print (CLF.predict(fd))
+        # print (CLF.predict_proba(fd))
+        # cv2.imshow('Current', img_clean_gray_class_local)
+        # cv2.waitKey(1000)
         for percentage in CLF.predict_proba(fd)[0]:
             if percentage > best_perc:
                 best_perc = percentage
@@ -568,6 +546,7 @@ def learn_hog(img):
     global C_SIZE
     global HOG_LIST
     global LABELS
+    global LABEL
     w, l = np.shape(img)
     img_list = list()
     img_list.append((img[:, :]))  # no changes
@@ -657,6 +636,56 @@ def test_from_disk(value):
     print ('Done')
 
 
+def test_from_disk_label(value):
+    print ('Testing from disk')
+    start_time = time.time()
+    path = 'TST_UPRIGHT/'
+    global LABEL
+    global ROTATION
+    global TOTAL
+    global PERCENTAGE
+    TOTAL = 0
+    global FAILURE
+    FAILURE = 0
+    for filename in os.listdir(path):
+        TOTAL += 1
+        if (TOTAL % 20) == 0:
+            start_time = time.time()
+        LABEL = filename.rsplit('_', 3)[0]
+        # # print ('Label ' + str(LABEL))
+        # # print 'Rotation ' + str(ROTATION)
+        imagee = cv2.imread(path + filename)
+        imagee = cv2.resize(imagee, (128, 128))
+        # found_rot = get_img_rot(imagee)
+        opencv_hog = cv2.HOGDescriptor((128, 128), (B_SIZE, B_SIZE), (B_STRIDE, B_STRIDE), (C_SIZE, C_SIZE), N_BIN)
+        h1 = opencv_hog.compute(imagee)
+        fd = np.reshape(h1, (len(h1),))
+        fd = fd.reshape(1, -1)
+        found_label = CLF.predict(fd)[0]
+        if not str(found_label) == str(LABEL):
+            FAILURE += 1
+            print ("Got " + str(found_label))
+            print ("Expected " + str(LABEL))
+            print ("\n")
+            cv2.imshow('Current', imagee)
+            cv2.waitKey(1000)
+    # if not abs(ROTATION - found_rot) < 0.5:
+        #     # print ('Testing ' + str(filename))
+        #     FAILURE += 1
+        #     # print ('Does not work')
+        #     # cv2.imshow('Did not work',imagee)
+        #     # cv2.waitKey(100)
+        #     # print (found_rot)
+        #     # print (ROTATION)
+        # if (TOTAL % 20) == 0:
+        #     print('Elapsed Time Testing Image ' + str(TOTAL) + ' = ' + str(time.time() - start_time) + '\n')
+    PERCENTAGE = 100 * FAILURE / TOTAL
+    print ('Failure = ' + str(PERCENTAGE) + '%')
+    print ('Failures = ' + str(FAILURE))
+    print('Elapsed Time Testing = ' + str(time.time() - start_time) + '\n')
+    print ('Done')
+
+
 def live_learn(value):
     global LIVE
     print (CLF)
@@ -672,7 +701,7 @@ def learn_from_disk(value):
             start_time = time.time()
         # print 'Learning ' + str(filename)
         LABEL = filename.rsplit('_', 2)[0]
-        # print 'Label = ' + str(LABEL)
+        # print ('Label = ' + str(LABEL))
         imagee = cv2.imread(path + filename)
         learn_hog(imagee)
         if (i % 20) == 0:
@@ -770,14 +799,13 @@ if __name__ == '__main__':
     cv2.createTrackbar('Info HoG', MAIN_WINDOW_NAME, 0, 1, hog_info)
     cv2.createTrackbar('Save HoG to Disk', MAIN_WINDOW_NAME, 0, 1, save_hog)
     cv2.createTrackbar('Learn', MAIN_WINDOW_NAME, 0, 1, learn)
-    cv2.createTrackbar('Big Test', MAIN_WINDOW_NAME, 0, 1, big_test)
+    cv2.createTrackbar('Test Labels', MAIN_WINDOW_NAME, 0, 1, test_from_disk_label)
     cv2.createTrackbar('Load Class', MAIN_WINDOW_NAME, 0, 1, load_class)
     cv2.createTrackbar('Live Learn', MAIN_WINDOW_NAME, 0, 1, live_learn)
     cv2.createTrackbar('Debug', MAIN_WINDOW_NAME, 0, 1, debug)
     cv2.createTrackbar('Predict HoG', MAIN_WINDOW_NAME, 0, 1, hog_pred)
     cv2.createTrackbar("Depth Capture Range", MAIN_WINDOW_NAME, int(100 * VAL_DEPTH_CAPTURE), 150, changecapture)
     cv2.imshow(MAIN_WINDOW_NAME, 0)
-    load_class(1)
     print ("Creating subscribers")
     image_sub_rgb = rospy.Subscriber("/camera/rgb/image_rect_color", Image, callback_rgb, queue_size=1)
     image_sub_depth = rospy.Subscriber("/camera/depth_registered/image_raw/", Image, callback_depth, queue_size=1)
