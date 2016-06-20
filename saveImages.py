@@ -29,6 +29,18 @@ import numpy as np
 
 import cv2
 
+import readline, glob
+
+#################
+# Configuration #
+#################
+
+def complete(text, state):
+    return (glob.glob(text+'*')+[None])[state]
+
+readline.set_completer_delims(' \t\n;')
+readline.parse_and_bind("tab: complete")
+readline.set_completer(complete)
 
 #########
 # Class #
@@ -82,14 +94,14 @@ class FileManager:
                 if self.__file_name != '' and self.__file_name != 'path':
                     end_loop = True
 
-                if self.__file_name != 'path' and for_read and not self.__exist_file():
+                if self.__file_name != 'path' and self.__file_name != 'exit' and for_read and not self.__exist_file():
                     print("No file exists with this name!")
                     end_loop = False
 
         return self.__file_name != "exit"
 
     def __get_file_name(self):
-        if not self.__get_file_name_for_read(False):
+        if not self.__get_file_name_for_read(for_read=False):
             return False
 
         self.__file_suffix = 1
@@ -130,12 +142,19 @@ class FileManager:
             img = cv2.imread(name_total_depth, cv2.IMREAD_GRAYSCALE)
             if img is not None:
                 self.__depth_img = img / 255.0 * depth
+                self.__depth_img = np.array(self.__depth_img, dtype=np.float32)
                 self.__load_depth_from_file = 1
 
         return self.__depth_img
 
-    def init_read_img_from_file(self):
-        self.__get_file_name_for_read()
+    def init_read_img_from_file(self, f_path='', f_name=''):
+        if f_path == '' or f_name == '':
+            self.__get_file_name_for_read(for_read=True)
+        elif os.path.exists(f_path+f_name+".png"):
+            self.__file_path = f_path
+            self.__file_name = f_name
+        else:
+            self.__file_name = 'exit'
 
         if self.__file_name == 'exit':
             print("\nNo image loaded!\n")
@@ -158,7 +177,7 @@ class FileManager:
     def __transform_depth_img(self, img, n, depth):
         img = img * n / depth
         img = np.where(img <= n, img, n)
-        img.astype(int)
+        img.astype(np.uint8)
         return img
 
     def init_save_images(self):
@@ -200,8 +219,8 @@ fileM = FileManager()
 # Functions #
 #############
 
-def initialisation_file_reading():
-    return fileM.init_read_img_from_file()
+def initialisation_file_reading(f_path='', f_name=''):
+    return fileM.init_read_img_from_file(f_path, f_name)
 
 
 def read_color_img():
@@ -222,3 +241,4 @@ def save_color_img(img):
 
 def save_depth_img(img, depth):
     return fileM.save_depth_image_to_file(img, depth)
+

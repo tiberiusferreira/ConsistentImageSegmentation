@@ -9,7 +9,7 @@ from skimage.feature import hog
 from sklearn.linear_model import SGDClassifier
 import pickle
 import os
-
+import time
 import bufferImageMsg
 
 #############
@@ -24,15 +24,15 @@ NB_MAX_DEPTH_IMG = 30
 
 NB_IMG_FOR_LEARN = 30
 
-LEARN_PATH = '../../LRN_IMGS/'
-TEST_PATH = '../../TST_IMGS/'
+LRN_PATH = './LRN_IMGS/'
+TEST_PATH = './TST_IMGS/'
 
 MAIN_WINDOW = "Controls"
 
 SHOW_COLOR_IMG = "Show color img"
 SHOW_DEPTH_IMG = "Show depth img"
 
-LEARN_FROM_DISK = "Learn"
+LEARN_FROM_DISK = "Learn from DISK"
 TEST_FROM_DISK = "Test"
 UNKNOWN_OBJECT = "Unknown?"
 
@@ -110,9 +110,9 @@ class ImgAveraging:
 ####################
 # Global variables #
 ####################
-
-b_size = 64  # 15  # block size
-c_size = 32  # 15  # cell size
+b_size = 64  # 15  block size
+b_stride = 32
+c_size = 32  # 15  cell size
 callback_rgb_timer = 0
 clf = SGDClassifier(loss='log')
 color = ''
@@ -128,6 +128,7 @@ img_bgr8_clean = np.array([[0]])
 img_clean_bgr_learn = np.array([[0]])
 img_clean_gray_class = np.array([[0]])
 interactions_flag = 0
+implements_p_fit = 1
 label = ''
 labels = list()
 last_hog = 0
@@ -145,7 +146,7 @@ saving_learn = 0
 saving_test = 0
 show_color_img_flag = 0
 show_depth_img_flag = 0
-show_flag = 0
+show_flag = 1
 shuffled_x = list()
 shuffled_y = list()
 start_time2 = 0
@@ -171,11 +172,8 @@ def learn_from_disk_callback(value):
     global learn_flag
     global show_flag
 
-    if value == 1:
-        learn_from_disk()
-        # show_flag = 1
-
-    learn_flag = value
+    learn_from_disk()
+    learn_flag = 1
 
 
 def run_callback(value):
@@ -240,10 +238,8 @@ def filter_by_depth():
 
     depth_img_avg = depth_img_averaging.average()
     closest_pnt = np.amin(depth_img_avg)
-    # print np.shape(depth_img_avg)
     depth_img_avg = cv2.resize(depth_img_avg, (WIDTH, HEIGHT))
     depth_range = closest_pnt + depth_capture
-    # print np.shape(depth_img_avg)
     # generate a mask with the closest points
     img_detection = np.where(depth_img_avg < depth_range, depth_img_avg, 0)
     # put all the pixels greater than 0 to 255
@@ -251,7 +247,6 @@ def filter_by_depth():
     mask = np.array(mask, dtype=np.uint8)  # convert to 8-bit
     im2, contours, hierarchy = cv2.findContours(mask, 1, 2, offset=(0, -6))
     biggest_cont = contours[0]
-    # biggest_cont = np.array([[0, 1], [1, 1], [0, 0]]) # smallest contour
     for cnt in contours:
         if cv2.contourArea(cnt) > cv2.contourArea(biggest_cont):
             biggest_cont = cnt
@@ -308,7 +303,7 @@ def get_img_rot(img_bgr):
     best_rot = 0
     best_perc = 0
     # noinspection PyArgumentList
-    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (c_size, c_size), (c_size, c_size), n_bin)
+    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
     for i in range(4):
         # Calculate HoG
         h1 = opencv_hog.compute(img_clean_gray_class_local)
@@ -322,21 +317,6 @@ def get_img_rot(img_bgr):
         m = cv2.getRotationMatrix2D((cols / 2, rows / 2), 90, 1)
         img_clean_gray_class_local = cv2.warpAffine(img_clean_gray_class_local, m, (cols, rows))
     return best_rot
-
-
-def hog_appender():
-    global recording_flag
-    global last_hog
-    global hog_list
-    global labels
-    global label
-
-    print ('Already have these labels:')
-    myset = set(labels)
-    print (str(myset))
-    mode = str(raw_input('Label: '))
-    label = mode
-    recording_flag = 1
 
 
 def hog_info():
@@ -355,46 +335,56 @@ def hog_pred():
     global c_size
     global img_clean_gray_class
     global clf
-
-    fd = hog(img_clean_gray_class, orientations=n_bin, pixels_per_cell=(c_size, c_size),
-             cells_per_block=(b_size / c_size, b_size / c_size), visualise=False)
+    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
+    fd = opencv_hog.compute(img_clean_gray_class)
+    fd = np.reshape(fd, (len(fd),))
+    fd = fd.reshape(1, -1)
     print (clf.predict([fd]))
 
 
 def learn():
+    print ('Learning')
+    start_time = time.time()
     global hog_list
+    global labels
+    classes = np.unique(labels).tolist()
+    if implements_p_fit == 1:
+        for i in range(10):
+            classes.append('new' + str(i))
+    print (classes)
     global shuffled_x
     global shuffled_y
-
-    print ('Learning')
-    start_time = rospy.get_time()
-    classes = np.unique(labels).tolist()
-    for i in range(10):
-        classes.append('new' + str(i))
-    print (classes)
-
     shuffledrange = range(len(labels))
-    for i in range(5):
+    if implements_p_fit == 1:
+        for i in range(5):
+            random.shuffle(shuffledrange)
+            shuffled_x = [hog_list[i] for i in shuffledrange]
+            shuffled_y = [labels[i] for i in shuffledrange]
+            print (len(shuffled_x))
+            for i2 in range(10):
+                print (i2)
+                clf.partial_fit(shuffled_x[i2 * len(shuffled_x) / 10:(i2 + 1) * len(shuffled_x) / 10], shuffled_y[i2 * len(shuffled_x) / 10:(i2 + 1) * len(shuffled_x) / 10], classes)
+    else:
+        shuffledrange = range(len(labels))
         random.shuffle(shuffledrange)
+        # SHUFFLED_X = HOG_LIST
+        # SHUFFLED_Y = LABELS
         shuffled_x = [hog_list[i] for i in shuffledrange]
         shuffled_y = [labels[i] for i in shuffledrange]
-        print (len(shuffled_x))
-        for i2 in range(10):
-            print (i2)
-            clf.partial_fit(shuffled_x[i2 * len(shuffled_x) / 10:(i2 + 1) * len(shuffled_x) / 10],
-                            shuffled_y[i2 * len(shuffled_x) / 10:(i2 + 1) * len(shuffled_x) / 10], classes)
+        clf.fit(shuffled_x, shuffled_y)
     print ('Done Learning')
-    print('Elapsed Time Learning = ' + str(rospy.get_time() - start_time) + '\n')
+    print('Elapsed Time Learning = ' + str(time.time() - start_time) + '\n')
+
 
 
 def learn_from_disk():
     global label
     i = 0
     start_time = 0
-    for filename in os.listdir(LEARN_PATH):
+    for filename in os.listdir(LRN_PATH):
         if (i % 20) == 0:
             start_time = rospy.get_time()
-        imagee = cv2.imread(LEARN_PATH + filename)
+        imagee = cv2.imread(LRN_PATH + filename)
         learn_hog(imagee)
         if (i % 20) == 0:
             print('Elapsed Time Learning Image ' + str(i) + ' = ' + str(rospy.get_time() - start_time) + '\n')
@@ -439,11 +429,10 @@ def learn_hog(img):
             img_list.append((img[i:, i:l - i]))  # cut up and down and left
             img_list.append((img[:w - i, i:l - i]))  # cut up and down and right
             img_list.append((img[i:w - i, i:l - i]))  # cut up and down and left and right
-    # hog = cv2.HOGDescriptor()
     index = 0
     # print('Elapsed Time Pre HoG = ' + str(time.time() - start_time) + '\n')
     # noinspection PyArgumentList
-    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (c_size, c_size), (c_size, c_size), n_bin)
+    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
     for imgs in img_list:
         imgs = cv2.resize(imgs, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
         if show_flag == 1:
@@ -611,7 +600,7 @@ def objects_detector(img_bgr8):
     # fd2, hog_image = hog(img_clean_GRAY_class, orientations=n_bin, pixels_per_cell=(c_size, c_size),
     #                     cells_per_block=(b_size / c_size, b_size / c_size), visualise=True)
     # noinspection PyArgumentList
-    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (c_size, c_size), (c_size, c_size), n_bin)
+    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
 
     for i in range(4):
         # fd2_ori = fd2.copy()
@@ -734,6 +723,7 @@ def show_controls_window():
     cv2.createTrackbar(LEARN_FROM_DISK, MAIN_WINDOW, 0, 1, learn_from_disk_callback)
     cv2.createTrackbar(TEST_FROM_DISK, MAIN_WINDOW, 0, 1, test_from_disk_callback)
     cv2.createTrackbar(UNKNOWN_OBJECT, MAIN_WINDOW, 0, 1, unknown_object_callback)
+    cv2.createTrackbar('Capture Range', MAIN_WINDOW, int(100 * depth_capture), 150, depth_capture_callback)
 
     cv2.imshow(MAIN_WINDOW, 0)
 

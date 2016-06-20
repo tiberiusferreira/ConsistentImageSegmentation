@@ -45,95 +45,95 @@ MAX_AREA = 15000
 N_COLORS = 80
 TRACKBAR_NB_PROFONDEUR_NAME = "Nb img profondeur"
 NB_IMG_PROFONDEUR_MAX = 100
-NB_DEPTH_IMGS_INITIAL = 30
+nb_depth_imgs_cache = 30
 AFFICHAGE_PROFONDEUR = "Afficher img profondeur"
-SHOW_DEPTH = False
+show_depth = False
 AFFICHAGE_COULEUR = "Afficher img couleur"
-SHOW_COLOR = False
+show_color = False
 CAPTURE_PROFONDEUR = "capture profondeur"
-VAL_DEPTH_CAPTURE = 0.04
+val_depth_capture = 0.04
 interactive = 0
-DEPTH_IMG_INDEX = 0
+depth_img_index = 0
 pointsIndex = 0
 NB_INDEX_BOX = 7
-LAST_DEPTH_IMGS = range(NB_IMG_PROFONDEUR_MAX + 1)
+last_depth_imgs = range(NB_IMG_PROFONDEUR_MAX + 1)
 NUMBER_LAST_POINTS = 15
 lastpoints = np.zeros((NUMBER_LAST_POINTS, 3, 2))
 lastBoxes = range(NB_INDEX_BOX + 1)
-HOG_LIST = list()
+hog_list = list()
 last_hog = 0
 indiceboxes = 0
-DEPTH_IMG_AVG = 0
-IMG_BGR8_CLEAN = 0
-GOT_COLOR = False
-GOT_DEPTH = False
-CLF = SGDClassifier(loss='log')
-LABELS = list()
-RECORDING = 0
-LABEL = ''
-RECORDING_INDEX = 0
-LOADED = 0
+depth_img_avg = 0
+img_bgr8_clean = 0
+got_color = False
+got_depth = False
+clf = SGDClassifier(loss='log')
+labels = list()
+recording = 0
+label = ''
+recording_index = 0
+loaded = 0
 DEBUG = 0
 SHOW = 0
-SAVING_LEARN = 0
-SAVED = 0
-COLOR = ''
-N_BIN = 9 #4  # number of orientations for the HoG
-B_SIZE = 16 #15  # block size
-C_SIZE = 8 #15  # cell size
-ROTATION = -1
-SAVING_TEST = 0
-FAILURE = 0
-TOTAL = 0
-PERCENTAGE = -1
-LIVE = 0
-SHUFFLED_Y = list()
-SHUFFLED_X = list()
-LIVE_CNT = 0
+saving_learn = 0
+saved = 0
+color = ''
+n_bin = 9 #4  # number of orientations for the HoG
+b_size = 16 #15  # block size
+c_size = 8 #15  # cell size
+rotation = -1
+saving_test = 0
+failure = 0
+total = 0
+percentage = -1
+live = 0
+shuffled_y = list()
+shuffled_x = list()
+live_cnt = 0
 def nothing(x):
     pass
 
 
 def save_imgs_learn(value):
     mode = str(raw_input('Label: '))
-    global LABEL
+    global label
     LABEL = mode
     color_ = str(raw_input('Color: '))
-    global COLOR
+    global color
     COLOR = color_
-    global SAVING_LEARN
+    global saving_learn
     SAVING_LEARN = 1
 
 
 def save_imgs_test(value):
     mode = str(raw_input('Label: '))
-    global LABEL
+    global label
     LABEL = mode
     color_ = str(raw_input('Color: '))
-    global COLOR
+    global color
     COLOR = color_
-    global ROTATION
+    global rotation
     ROTATION = str(raw_input('Rotation: '))
-    global SAVING_TEST
+    global saving_test
     SAVING_TEST = 1
 
 
 def changecapture(n):
-    global VAL_DEPTH_CAPTURE
+    global val_depth_capture
     if n == 0:
         n = 1
     VAL_DEPTH_CAPTURE = float(n) / 100
 
 
 def changeprofondeur(n):
-    global NB_DEPTH_IMGS_INITIAL
+    global nb_depth_imgs_cache
     NB_DEPTH_IMGS = n
     if NB_DEPTH_IMGS <= 0:
         NB_DEPTH_IMGS = 1
 
 
 def changeaffprofondeur(b):
-    global SHOW_DEPTH
+    global show_depth
     if b == 1:
         SHOW_DEPTH = True
     else:
@@ -141,7 +141,7 @@ def changeaffprofondeur(b):
 
 
 def changeaffcouleur(b):
-    global SHOW_COLOR
+    global show_color
     if b == 1:
         SHOW_COLOR = True
     else:
@@ -158,7 +158,7 @@ def clean(img, n):
 
 def callback_depth(msg):
     # treating the image containing the depth data
-    global DEPTH_IMG_INDEX, LAST_DEPTH_IMGS, DEPTH_IMG_AVG, GOT_DEPTH
+    global depth_img_index, last_depth_imgs, depth_img_avg, got_depth
     # getting the image
     try:
         img = CvBridge().imgmsg_to_cv2(msg, "passthrough")
@@ -166,7 +166,7 @@ def callback_depth(msg):
         print (e)
         return
     cleanimage = clean(img, 255)
-    if SHOW_DEPTH:
+    if show_depth:
         # shows the image after processing
         cv2.imshow("Depth", img)
         cv2.waitKey(1)
@@ -175,22 +175,22 @@ def callback_depth(msg):
     # storing the image
     lastDepthImgs[depthImgIndex] = np.copy(cleanimage)
     depthImgIndex += 1
-    if depthImgIndex > NB_DEPTH_IMGS_INITIAL:
+    if depthImgIndex > nb_depth_imgs_cache:
         depthImgIndex = 0
     # creates an image which is the average of the last ones
     depth_img_Avg = np.copy(lastDepthImgs[0])
-    for i in range(0, NB_DEPTH_IMGS_INITIAL):
+    for i in range(0, nb_depth_imgs_cache):
         depth_img_Avg += lastDepthImgs[i]
-    depth_img_Avg /= NB_DEPTH_IMGS_INITIAL
+    depth_img_Avg /= nb_depth_imgs_cache
     got_depth = True  # ensures there is an depth image available
-    if GOT_COLOR and got_depth:
+    if got_color and got_depth:
         filter_by_depth()
 
 
 
 def callback_rgb(msg):
     # processing of the color image
-    global IMG_BGR8_CLEAN, GOT_COLOR
+    global img_bgr8_clean, got_color
     # getting image
     try:
         img = CvBridge().imgmsg_to_cv2(msg, "bgr8")
@@ -200,7 +200,7 @@ def callback_rgb(msg):
     img = img[32:992, 0:1280]  # crop the image because it does not have the same aspect ratio of the depth one
     img_bgr8_clean = np.copy(img)
     got_color = True  # ensures there is an color image available
-    if SHOW_COLOR:
+    if show_color:
         # show image obtained
         cv2.imshow("couleur", img_bgr8_clean)
         cv2.waitKey(1)
@@ -210,13 +210,13 @@ def callback_rgb(msg):
 
 def filter_by_depth():
     # Uses the depth image to only take the part of the image corresponding to the closest point and a bit further
-    global DEPTH_IMG_AVG
+    global depth_img_avg
     closest_pnt = np.amin(depth_img_Avg)
     # print np.shape(depth_img_Avg)
     depth_img_Avg = cv2.resize(depth_img_Avg, (WIDTH, HEIGHT))
     # print np.shape(depth_img_Avg)
     # generate a mask with the closest points
-    img_detection = np.where(depth_img_Avg < closest_pnt + VAL_DEPTH_CAPTURE, depth_img_Avg, 0)
+    img_detection = np.where(depth_img_Avg < closest_pnt + val_depth_capture, depth_img_Avg, 0)
     # put all the pixels greater than 0 to 255
     ret, mask = cv2.threshold(img_detection, 0.0, 255, cv2.THRESH_BINARY)
     mask = np.array(mask, dtype=np.uint8)  # convert to 8-bit
@@ -229,7 +229,7 @@ def filter_by_depth():
     (center, size, angle) = cv2.minAreaRect(biggest_cont)
     points = cv2.boxPoints(min_area_rect)  # Find four vertices of rectangle from above rect
     points = np.int32(np.around(points))  # Round the values and make it integers
-    img_bgr8_clean_copy = IMG_BGR8_CLEAN.copy()
+    img_bgr8_clean_copy = img_bgr8_clean.copy()
     cv2.drawContours(img_bgr8_clean_copy, [points], 0, (0, 0, 255), 2)
     cv2.drawContours(img_bgr8_clean_copy, biggest_cont, -1, (255, 0, 255), 2)
     cv2.imshow('RBG', img_bgr8_clean_copy)
@@ -242,8 +242,8 @@ def filter_by_depth():
     rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
     # rotate the entire image around the center of the parking cell by the
     # angle of the rotated rect
-    imgwidth, imgheight = (IMG_BGR8_CLEAN.shape[0], IMG_BGR8_CLEAN.shape[1])
-    rotated = cv2.warpAffine(IMG_BGR8_CLEAN, rot_matrix, (imgheight, imgwidth), flags=cv2.INTER_CUBIC)
+    imgwidth, imgheight = (img_bgr8_clean.shape[0], img_bgr8_clean.shape[1])
+    rotated = cv2.warpAffine(img_bgr8_clean, rot_matrix, (imgheight, imgwidth), flags=cv2.INTER_CUBIC)
     # extract the rect after rotation has been done
     sizeint = (np.int32(size[0]), np.int32(size[1]))
     uprightrect = cv2.getRectSubPix(rotated, sizeint, center)
@@ -254,26 +254,26 @@ def filter_by_depth():
 
 
 def hog_pred(value):
-    global N_BIN
-    global B_SIZE
-    global C_SIZE
+    global n_bin
+    global b_size
+    global c_size
     global img_clean_GRAY_class
     fd = hog(img_clean_GRAY_class, orientations=n_bin, pixels_per_cell=(c_size, c_size),
              cells_per_block=(b_size / c_size, b_size / c_size), visualise=False)
-    global CLF
+    global clf
     print (clf.predict([fd]))
 
 
 def load_class(value):
-    global CLF
-    global HOG_LIST
-    global LABELS
+    global clf
+    global hog_list
+    global labels
     with open('HOG_N_LABELS/HOG_N_LABELS.pickle') as f:
         hog_tuple = pickle.load(f)
     HOG_LIST = hog_tuple[0]
     labels = hog_tuple[1]
     # print (clf)
-    global LOADED
+    global loaded
     LOADED = 1
     print ('Loaded')
 
@@ -296,26 +296,26 @@ def learn_callback(value):
 def learn(value):
     print ('Learning')
     start_time = time.time()
-    global HOG_LIST
-    classes = np.unique(LABELS).tolist()
+    global hog_list
+    classes = np.unique(labels).tolist()
     for i in range(10):
         classes.append('new' + str(i))
     print (classes)
-    global SHUFFLED_X
-    global SHUFFLED_Y
-    shuffledrange = range(len(LABELS))
+    global shuffled_x
+    global shuffled_y
+    shuffledrange = range(len(labels))
     for i in range(5):
         random.shuffle(shuffledrange)
         shuffledX = [HOG_LIST[i] for i in shuffledrange]
-        shuffledY = [LABELS[i] for i in shuffledrange]
-        CLF.partial_fit(shuffledX, shuffledY, classes)
+        shuffledY = [labels[i] for i in shuffledrange]
+        clf.partial_fit(shuffledX, shuffledY, classes)
     print ('Done Learning')
     print('Elapsed Time Learning = ' + str(time.time() - start_time) + '\n')
 
 
 def save_hog(value):
-    global CLF
-    HOG_TUPLE = (HOG_LIST, LABELS)
+    global clf
+    HOG_TUPLE = (hog_list, labels)
     # print ('Hog = ' + str(HOG_TUPLE[0]))
     print ('labels = ' + str(np.unique(HOG_TUPLE[1])))
     # clf.fit(HOG_TUPLE[0], HOG_TUPLE[1])
@@ -326,22 +326,22 @@ def save_hog(value):
 
 
 def hog_appender(value):
-    global RECORDING
+    global recording
     global last_hog
-    global HOG_LIST
-    global CLF
-    global LABELS
+    global hog_list
+    global clf
+    global labels
     print ('Already have these labels:')
     myset = set(labels)
     print (str(myset))
     mode = str(raw_input('Label: '))
-    global LABEL
+    global label
     LABEL = mode
     RECORDING = 1
 
 def hog_info(value):
-    global LABELS
-    global HOG_LIST
+    global labels
+    global hog_list
     print ('Current labels = ')
     myset = set(labels)
     print (str(myset))
@@ -354,8 +354,8 @@ def hog_bench(value):
     img_clean_GRAY_class = cv2.resize(img_clean_GRAY_class, (120, 120), interpolation=cv2.INTER_AREA)  # resize image
     timeinit = time.time()
     for i in range(500):
-        fd = hog(img_clean_GRAY_class, orientations=N_BIN, pixels_per_cell=(C_SIZE, C_SIZE),
-                 cells_per_block=(B_SIZE / C_SIZE, B_SIZE / C_SIZE), visualise=False)
+        fd = hog(img_clean_GRAY_class, orientations=n_bin, pixels_per_cell=(c_size, c_size),
+                 cells_per_block=(b_size / c_size, b_size / c_size), visualise=False)
     print (time.time()-timeinit)
     print (len(fd))
 
@@ -377,15 +377,15 @@ def objects_detector(img_bgr8):
     global img_clean_GRAY_class
     img_clean_GRAY_class = cv2.cvtColor(img_clean_BGR_class, cv2.COLOR_BGR2GRAY)
     cv2.imshow('Clean', img_clean_BGR_class)
-    global CLF
+    global clf
     global last_hog
-    global N_BIN
-    global B_SIZE
-    global C_SIZE
-    global SAVING_LEARN
-    global RECORDING
+    global n_bin
+    global b_size
+    global c_size
+    global saving_learn
+    global recording
     if RECORDING == 1:
-        global RECORDING_INDEX
+        global recording_index
         learn_hog(img_clean_BGR_learn)
         # HOG_LIST.append(last_hog)
         # labels.append(LABEL)
@@ -395,21 +395,21 @@ def objects_detector(img_bgr8):
             RECORDING = 0
             INTERACTIONS = 0
             print ('Done recording')
-    global SAVED
-    global SAVING_LEARN
+    global saved
+    global saving_learn
     if SAVING_LEARN == 1:
-        cv2.imwrite('LRN_IMGS/' + LABEL + '_' + str(SAVED) + '_' + COLOR + '.png', img_clean_BGR_learn)
+        cv2.imwrite('LRN_IMGS/' + label + '_' + str(SAVED) + '_' + color + '.png', img_clean_BGR_learn)
         SAVED += 1
         print (SAVED)
         if SAVED == 3:
             SAVING_LEARN = 0
             SAVED = 0
             print ('Done saving')
-    global SAVING_TEST
+    global saving_test
     cv2.imshow('Save_test', img_clean_BGR_class)
     if SAVING_TEST == 1:
-        cv2.imwrite('TST_IMGS/' + LABEL + '_' + str(ROTATION) + '_' +
-                    str(SAVED) + '_' + COLOR + '.png', img_clean_BGR_class)
+        cv2.imwrite('TST_IMGS/' + label + '_' + str(rotation) + '_' +
+                    str(SAVED) + '_' + color + '.png', img_clean_BGR_class)
         SAVED += 1
         print (SAVED)
         if SAVED == 20:
@@ -418,13 +418,13 @@ def objects_detector(img_bgr8):
             print ('Done saving')
     best_rot = 0
     best_perc = 0
-    global LIVE
-    global LIVE_CNT
-    global NB_DEPTH_IMGS_INITIAL
-    global SHUFFLED_X
-    global SHUFFLED_Y
-    global HOG_LIST
-    global LABELS
+    global live
+    global live_cnt
+    global nb_depth_imgs_cache
+    global shuffled_x
+    global shuffled_y
+    global hog_list
+    global labels
     if LIVE == 1:
         start_time2 = time.time()
         if LIVE_CNT == 0:
@@ -552,10 +552,10 @@ def get_img_rot(img_bgr):
     # return perc.index(max(perc))
     for i in range(4):
         ########## Calculate HoG
-        fd, hog_image = hog(img_clean_GRAY_class_local, orientations=N_BIN, pixels_per_cell=(C_SIZE, C_SIZE),
-                            cells_per_block=(B_SIZE / C_SIZE, B_SIZE / C_SIZE), visualise=True)
+        fd, hog_image = hog(img_clean_GRAY_class_local, orientations=n_bin, pixels_per_cell=(c_size, c_size),
+                            cells_per_block=(b_size / c_size, b_size / c_size), visualise=True)
         fd = fd.reshape(1, -1)
-        for percentage in CLF.predict_proba(fd)[0]:
+        for percentage in clf.predict_proba(fd)[0]:
             if percentage > best_perc:
                 best_perc = percentage
                 best_rot = i
@@ -571,8 +571,8 @@ def my_hog(tuple):
     if not index == 0:
         M = cv2.getRotationMatrix2D((cols / 2, rows / 2), index*90, 1)
         img = cv2.warpAffine(img, M, (cols, rows))
-    fd = hog(img, orientations=N_BIN, pixels_per_cell=(C_SIZE, C_SIZE),
-             cells_per_block=(B_SIZE / C_SIZE, B_SIZE / C_SIZE), visualise=False)
+    fd = hog(img, orientations=n_bin, pixels_per_cell=(c_size, c_size),
+             cells_per_block=(b_size / c_size, b_size / c_size), visualise=False)
     return fd
 
 
@@ -580,15 +580,15 @@ def my_hog(tuple):
 def learn_hog(img):
     start_time = time.time()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    global N_BIN
-    global B_SIZE
-    global C_SIZE
-    global HOG_LIST
-    global LABELS
+    global n_bin
+    global b_size
+    global c_size
+    global hog_list
+    global labels
     w, l = np.shape(img)
     img_list = list()
     img_list.append((img[:, :]))  # no changes
-    global LIVE
+    global live
     if LIVE == 0:
         for i in range(1, 12, 2):
             img_list.append((img[0:w-i, :]))  # cut right
@@ -624,7 +624,7 @@ def learn_hog(img):
         HOG_LIST.append(hog(imgs, orientations=n_bin, pixels_per_cell=(c_size, c_size),
                             cells_per_block=(b_size / c_size, b_size / c_size), visualise=False))
         if not LIVE == 1:
-            labels.append(LABEL)
+            labels.append(label)
         else:
             labels.append('new0')
     print('Elapsed Time on HoG = ' + str(time.time() - start_time) + '\n')
@@ -634,12 +634,12 @@ def test_from_disk(value):
     print ('Testing from disk')
     start_time = time.time()
     path = 'TST_IMGS/'
-    global LABEL
-    global ROTATION
-    global TOTAL
-    global PERCENTAGE
+    global label
+    global rotation
+    global total
+    global percentage
     total = 0
-    global FAILURE
+    global failure
     failure = 0
     for filename in os.listdir(path):
         total += 1
@@ -665,8 +665,8 @@ def test_from_disk(value):
     print ('Done')
 
 def live_learn(value):
-    global LIVE
-    print (CLF)
+    global live
+    print (clf)
     LIVE = 1
 
     # HOG_LIST = list()
@@ -682,7 +682,7 @@ def live_learn(value):
 
 def learn_from_disk(value):
     path = 'LRN_IMGS/'
-    global LABEL
+    global label
     for filename in os.listdir(path):
         # print 'Learning ' + str(filename)
         LABEL = filename.rsplit('_', 2)[0]
@@ -694,24 +694,24 @@ def learn_from_disk(value):
 
 
 def big_test(value):
-    global N_BIN
-    global B_SIZE
-    global C_SIZE
+    global n_bin
+    global b_size
+    global c_size
     for bin_ in range(2, 15, 1):
         for b in range(30, 4, -1):
             start_time = time.time()
-            global LABELS
-            global HOG_LIST
+            global labels
+            global hog_list
             labels = list()
             HOG_LIST = list()
             n_bin = bin_
             b_size = b
             c_size = b
             path = 'LRN_IMGS/'
-            global LABEL
-            global FAILURE
-            global TOTAL
-            global PERCENTAGE
+            global label
+            global failure
+            global total
+            global percentage
             print ('Creating HoG')
             for filename in os.listdir(path):
                 # print 'Learning ' + str(filename)
@@ -739,9 +739,9 @@ def big_test(value):
 
 def GetHOGFeatures(object_img_rgb):
     std_length = 80
-    global N_BIN
-    global B_SIZE
-    global C_SIZE
+    global n_bin
+    global b_size
+    global c_size
     h, w, z = np.shape(object_img_rgb)
     img = cv2.resize(object_img_rgb, (std_length, std_length), interpolation=cv2.INTER_AREA)
     img = img[:, :, 1]
@@ -780,7 +780,7 @@ def mainn():
     rospy.init_node('imageToObjects', anonymous=True)
     print ("Creating windows")
     cv2.namedWindow(MAIN_WINDOW_NAME, cv2.WINDOW_NORMAL)
-    cv2.createTrackbar(TRACKBAR_NB_PROFONDEUR_NAME, MAIN_WINDOW_NAME, NB_DEPTH_IMGS_INITIAL, NB_IMG_PROFONDEUR_MAX,
+    cv2.createTrackbar(TRACKBAR_NB_PROFONDEUR_NAME, MAIN_WINDOW_NAME, nb_depth_imgs_cache, NB_IMG_PROFONDEUR_MAX,
                        changeprofondeur)
     cv2.createTrackbar('Show', MAIN_WINDOW_NAME, 0, 1, show)
     cv2.createTrackbar(AFFICHAGE_COULEUR, MAIN_WINDOW_NAME, 0, 1, changeaffcouleur)
@@ -798,7 +798,7 @@ def mainn():
     cv2.createTrackbar('Debug', MAIN_WINDOW_NAME, 0, 1, debug)
     cv2.createTrackbar('Predict HoG', MAIN_WINDOW_NAME, 0, 1, hog_pred)
     cv2.createTrackbar(AFFICHAGE_PROFONDEUR, MAIN_WINDOW_NAME, 0, 1, changeaffprofondeur)
-    cv2.createTrackbar(CAPTURE_PROFONDEUR, MAIN_WINDOW_NAME, int(100 * VAL_DEPTH_CAPTURE), 150, changecapture)
+    cv2.createTrackbar(CAPTURE_PROFONDEUR, MAIN_WINDOW_NAME, int(100 * val_depth_capture), 150, changecapture)
     cv2.imshow(MAIN_WINDOW_NAME, 0)
     print ("Creating subscribers")
     image_sub_rgb = rospy.Subscriber("/camera/rgb/image_rect_color", Image, callback_rgb, queue_size=1)

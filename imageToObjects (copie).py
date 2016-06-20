@@ -24,11 +24,11 @@ TRACKBAR_NB_PROFONDEUR_NAME = "Nb img profondeur"
 NB_IMG_PROFONDEUR_MAX = 100
 NB_DEPTH_IMGS = 30
 AFFICHAGE_PROFONDEUR = "Afficher img profondeur"
-SHOW_DEPTH = False
+show_depth = False
 AFFICHAGE_COULEUR = "Afficher img couleur"
-SHOW_COLOR = False
+show_color = False
 CAPTURE_PROFONDEUR = "capture profondeur"
-VAL_DEPTH_CAPTURE = 0.04
+val_depth_capture = 0.04
 interactive = 0
 depthImgIndex = 0
 pointsIndex = 0
@@ -49,7 +49,7 @@ def nothing(x):
 
 
 def changecapture(n):
-    global VAL_DEPTH_CAPTURE
+    global val_depth_capture
     if n == 0:
         n = 1
     VAL_DEPTH_CAPTURE = float(n) / 100
@@ -63,7 +63,7 @@ def changeprofondeur(n):
 
 
 def changeaffprofondeur(b):
-    global SHOW_DEPTH
+    global show_depth
     if b == 1:
         SHOW_DEPTH = True
     else:
@@ -71,7 +71,7 @@ def changeaffprofondeur(b):
 
 
 def changeaffcouleur(b):
-    global SHOW_COLOR
+    global show_color
     if b == 1:
         SHOW_COLOR = True
     else:
@@ -110,7 +110,7 @@ def callback_depth(msg):
     if got_color and got_depth:
         filter_by_depth()
 
-    if SHOW_DEPTH:
+    if show_depth:
         # shows the image after processing
         cv2.imshow("Depth", img)
         cv2.waitKey(1)
@@ -131,7 +131,7 @@ def callback_rgb(msg):
     img_bgr8_clean = np.copy(img)
 
     got_color = True  # ensures there is an color image available
-    if SHOW_COLOR:
+    if show_color:
         # show image obtained
         cv2.imshow("couleur", img_bgr8_clean)
         cv2.waitKey(1)
@@ -146,7 +146,7 @@ def filter_by_depth():
     depth_img_Avg = cv2.resize(depth_img_Avg, (WIDTH, HEIGHT))
 
     # generate a mask with the closest points
-    img_detection = np.where(depth_img_Avg < closest_pnt + VAL_DEPTH_CAPTURE, depth_img_Avg, 0)
+    img_detection = np.where(depth_img_Avg < closest_pnt + val_depth_capture, depth_img_Avg, 0)
     # put all the pixels greater than 0 to 255
     ret, mask = cv2.threshold(img_detection, 0.0, 255, cv2.THRESH_BINARY)
     mask = np.array(mask, dtype=np.uint8)  # convert to 8-bit
@@ -836,7 +836,7 @@ if __name__ == '__main__':
                        changeprofondeur)
     cv2.createTrackbar(AFFICHAGE_COULEUR, MAIN_WINDOW_NAME, 0, 1, changeaffcouleur)
     cv2.createTrackbar(AFFICHAGE_PROFONDEUR, MAIN_WINDOW_NAME, 0, 1, changeaffprofondeur)
-    cv2.createTrackbar(CAPTURE_PROFONDEUR, MAIN_WINDOW_NAME, int(100 * VAL_DEPTH_CAPTURE), 150, changecapture)
+    cv2.createTrackbar(CAPTURE_PROFONDEUR, MAIN_WINDOW_NAME, int(100 * val_depth_capture), 150, changecapture)
     cv2.imshow(MAIN_WINDOW_NAME, 0)
     print ("Creating subscribers")
     image_sub_rgb = rospy.Subscriber("/camera/rgb/image_rect_color", Image, callback_rgb, queue_size=50)

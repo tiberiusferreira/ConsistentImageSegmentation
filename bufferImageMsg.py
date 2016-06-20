@@ -1,6 +1,7 @@
 import rospy
 from sensor_msgs.msg import Image
 
+
 class BufferImageMsg:
     def __init__(self, nb_max):
         if nb_max < 1:
