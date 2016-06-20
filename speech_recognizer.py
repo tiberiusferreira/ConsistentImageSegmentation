@@ -1,0 +1,600 @@
+#!/usr/bin/python 
+# -*- coding: utf-8 -*-
+# -*- coding: GBK -*-
+# -*- coding: gb2312 -*-
+
+
+import os
+os.environ['http_proxy']=''
+
+import json
+import rospy
+import std_msgs.msg
+import subprocess
+import threading
+import time
+import urllib2
+import wave
+import numpy as np
+from robot_interaction_experiment.msg import Audition_Features
+import unicodedata
+import httplib
+from nltk.stem.snowball import FrenchStemmer
+from difflib import SequenceMatcher
+from unidecode import unidecode
+import copy
+
+
+import linecache
+from scipy.linalg import norm
+import inflect
+
+from unidecode import unidecode
+
+import snowballstemmer
+from nltk.stem.snowball import FrenchStemmer
+
+
+
+
+
+
+
+
+
+words_accum = []
+
+def strip_accents(s):
+    return ''.join(c for c in unicodedata.normalize('NFD', s)
+    if unicodedata.category(c) != 'Mn')
+
+def is_ascii(s):
+    return all(ord(c) < 128 for c in s)
+
+
+
+
+def _decode_list(data):
+    rv = []
+    for item in data:
+        if isinstance(item, unicode):
+            item = item.encode('utf-8')
+        elif isinstance(item, list):
+            item = _decode_list(item)
+        elif isinstance(item, dict):
+            item = _decode_dict(item)
+        rv.append(item)
+    return rv
+
+def _decode_dict(data):
+    rv = {}
+    for key, value in data.iteritems():
+        if isinstance(key, unicode):
+            key = key.encode('utf-8')
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
+        elif isinstance(value, list):
+            value = _decode_list(value)
+        elif isinstance(value, dict):
+            value = _decode_dict(value)
+        rv[key] = value
+    return rv
+
+
+key_index = 0
+keys = ["AIzaSyDNFg2kota93fJgvLyk2wO2ZYXpozKyxX8", # my 1st key
+        "AIzaSyC7ZhKDLLR1spQCGnaih4yjILTrueHeXv_B9UE", # my 2nd key
+        "AIzaSyBLBXFyljdIiAou4-kQZtQSEMrYeH26uTA", # my 3rd key
+        "AIzaSyDVQyv0QDioMDXjvgcwkjVYkPXJEJJFVcA",
+        'AIzaSyBTOmGYHQcGttGNzmBJOB1C5kQuAwy_-6k','AIzaSyDrWHPlx9ZI-VmfxUrLWj5jL1xmCFZUD1w','AIzaSyApTleBR_9eVS4s8QxsKanhZ2ixSZcgXJU','AIzaSyDpi3GYRzdiC1eKURyGwtuMiJe9PWcUXOQ','AIzaSyAtE8pv6OV-5-Gre0bqYWjoWoNKRXhb_Pg','IzaSyDmlOIV8Htomo7-2sN5Ax1QQ_AberovS3c','AIzaSyCmbH2W93E2XE8-tqTKBEG9HVhMSAedUpQ','AIzaSyAW7mwI9TwzhGhyVjxdwt4ZOtOMatSXBhE','AIzaSyCKlnFpvxgc4ISjbp8ipfCl_UQSwtgN5rA','AIzaSyDSrAybymCfeJ_iWT_1ivqcLKgyAhyHyZc','AIzaSyDLyI3b8PuHqRuxPsZwVvKXDIrN68aPY8U'] # my 4th key
+
+# my 1st key : AIzaSyDNFg2kota93fJgvLyk2wO2ZYXpozKyxX8
+# my 2nd key : AIzaSyC7ZhKDLLR1spQCGnaih4yjILHeXv_B9UE
+# my 3rd key : AIzaSyBLBXFyljdIiAou4-kQZtQSEMrYeH26uTA
+# my 4th key : AIzaSyDVQyv0QDioMDXjvgcwkjVYkPXJEJJFVcA
+
+# public key : AIzaSyCnl6MRydhw_5fLXIdASxkLJzcJh5iX0M4
+# sean key   : AIzaSyDpi3GYRzdiC1eKURyGwtuMiJe9PWcUXOQ
+# mihaela key : AIzaSyDrWHPlx9ZI-VmfxUrLWj5jL1xmCFZUD1w
+
+def speech_recognition(msg):
+    global rate
+    global status_pub
+    global audition_features_pub
+    global words_dictionary
+    
+    print "words_dictionary_line_87", words_dictionary
+    speech_frames = msg.data
+    
+#     print "speech_frames 01", speech_frames # why this will introduce trouble 
+#                        ==> will result in gibberish
+    global words_accum
+    
+    # save wave file
+    filename = 'output_' + str(int(time.time()))
+    wave_file = wave.open(filename + '.wav', 'wb')
+    wave_file.setnchannels(1)
+    wave_file.setsampwidth(2) # 16 bits
+    wave_file.setframerate(rate)
+    wave_file.writeframes(speech_frames)
+    wave_file.close()
+    
+    # convert to flat and remove wave file, block until done
+    subprocess.call(['flac', '--delete-input-file', filename + '.wav'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+    # send to Google
+    flac_file = open(filename + '.flac', 'rb')
+    flac_data = flac_file.read()
+    flac_file.close()
+    os.remove(filename + '.flac')
+    
+    audio = flac_data
+    header = {"Content-Type": "audio/x-flac; rate=16000"}
+    global key_index
+    global keys
+    
+    while True:
+        try:
+            url = "https://www.google.com/speech-api/v2/recognize?output=json&lang=%s&key=%s" % (language, keys[key_index])
+            data = urllib2.Request(url, audio, header)
+            post = urllib2.urlopen(data)
+            response = post.read().split('\n')
+            break
+        except Exception as exception:
+            print
+            print 'EXCEPTION:'
+            print exception
+            response = ['', '']
+            print
+        if key_index < len(keys) - 1:
+            print "change from key", key_index, "to key", key_index+1
+            key_index += 1
+        else:
+            new_key = raw_input("enter new key: ")
+            print "change from key", key_index, "to key", key_index+1
+            keys.append(new_key)
+            key_index = len(keys) - 1
+    
+    print "key", key_index
+    best_response = ''
+    final_response = ''
+    audio_response = ''
+    words = []
+    audition_features_msg = Audition_Features()
+    
+    if len(response) == 2:
+        print 'NOTHING'
+        status_pub.publish('remove')
+        print "words_dictionary_line_149", words_dictionary
+        words_histo = [0.0] * len(words_dictionary)
+        
+#         m = "année"
+#         m = unicodedata.normalize('NFKD', unicode(m)).encode('ascii', 'ignore')
+#         print "m = ", m
+#         words_t = ["c'est", 'un', 'cette', 'année']
+#         for m in words_t:
+#             if not is_ascii(m):
+#                 m = unicodedata.normalize('NFKD', unicode(m)).encode('ascii', 'ignore')
+#  
+#         print "words_t", words_t
+        
+
+
+
+    else:
+        response = response[1]
+        print 'RESPONSE:', response
+        try:
+            response = json.loads(response, object_hook=_decode_dict)
+            best_response = response['result'][0]['alternative'][0]['transcript']
+        except Exception as exception:
+            print 'EXCEPTION'
+            print exception
+            status_pub.publish('remove')
+        
+        print best_response
+        print type(best_response)
+
+
+
+
+        best_response = best_response.lower()
+        best_response = best_response.replace('à','a')
+        best_response = best_response.replace("â","a")
+        best_response = best_response.replace("ç","c")
+        best_response = best_response.replace("è","e")
+        best_response = best_response.replace("é","e")
+        best_response = best_response.replace("ë","e")
+        best_response = best_response.replace("ê","e")
+        best_response = best_response.replace("î","i")
+        best_response = best_response.replace("ï","i")
+        best_response = best_response.replace("ô","o")
+        best_response = best_response.replace("ù","u")
+        best_response = best_response.replace("û","u")
+        best_response = best_response.replace("œ","oe")
+        best_response = best_response.replace("æ","ae")
+        best_response = best_response.replace("c'est","ce est")
+
+
+        words = best_response.split(' ')
+        print "split_best_response", words # all words acquired each time
+
+
+
+
+
+
+
+#         words_t = ["c'est", 'un', 'cette', 'année']
+#         for m in words_t:
+#             if not is_ascii(m):
+#                 m = unicodedata.normalize('NFKD', unicode(m)).encode('ascii', 'ignore')
+#         print "words_t", words_t
+
+
+
+
+
+
+
+        # change words (fuzzy processing) 
+        for n,i in enumerate(words):
+            if i in ["anneau","nano","anneaux","agneau","agneaux","hello",\
+                        "eau","Hainaut","homme","agneau","agneaux","hainaut",\
+                         "allô", "allo","âne", "ane", "halo", "eternal", "lalo"]:
+                words[n] = "anneau"
+                
+            elif i in ["lego","legos","égaux","croix","luego","lingot",\
+                          "l'écho","écho","légume","légumes","like", \
+                          "l'aigle", "aligot", "aigl", "legum", "megot"\
+                          'legume', 'egaux', "l'écho", 'echo', 'legumes']:
+                words[n] = "lego"
+                
+            elif i in ["tasse","tasses","tache","taches","place","places",\
+                          "cintas","classe","classes","Stas",\
+                          "stas","tafe","taffe","taff"]:
+                words[n] = "tasse"
+                
+            elif i in ["voiture","voitures", "youtub", "youtube"]:
+                words[n] = "voiture"
+                
+            elif i in ["rouge","rouges"]:
+                words[n] = "rouge"
+                
+            elif i in ["jaune","jaunes","jeune","jeunes"]:
+                words[n] = "jaune"
+                
+            elif i in ["vert","verts","verte","vertes","verre","verres",\
+                          "vers","ouvert","ouverte","ouverts","ouvertes","hanover", "hiver"]:
+                words[n] = "vert"
+                
+            elif i in ["bleu","bleue","bleus","bleues","blanc",\
+                          "blanche","blancs","blanches","black", "plait", "bleu"]:
+                words[n] = "bleu"
+                
+            elif i in ["question", "qu'est-ce", "que", "quoi", \
+                          "quel", "quelle", "voissa"]:
+                words[n] = "question"
+                
+            elif i in ["pont", "tampon"]:
+                words[n] = "pont"
+           
+            elif i in ["ross", "roissy"]:
+                words[n] = "ros"
+           
+        print "words emunerate", words
+
+
+
+        print 12
+        # stemmerF = FrenchStemmer()  
+        print 13
+        
+        words_stemmed = []
+        for m in words:
+            print "m =", m
+#             if not is_ascii(m):
+#                 m = unicodedata.normalize('NFKD', unicode(m)).encode('ascii', 'ignore')
+            # words_stemmed.append(stemmerF.stem(str(m)))
+            words_stemmed.append(str(m))
+
+
+
+        
+#         ###### remove the repeated same words (for multiple objects experiments, repeated words are normal)
+#         words_stemmed = sorted(set(words_stemmed),key=words_stemmed.index)
+#         words_stemmed = [str(m) for m in words_stemmed]
+#         
+#         ########################################################################
+        
+        
+        for n, i in enumerate(words_stemmed):
+            if i in ["roug"]:
+                words_stemmed[n] = "rouge"
+            elif i in ["jaun"]:
+                words_stemmed[n] = "jaune"
+            elif i in ["boussol"]:
+                words_stemmed[n] = "boussole"
+            elif i in ["voitur"]:
+                words_stemmed[n] = "voiture"
+            elif i in ["rouge","rouges"]:
+                words_stemmed[n] = "rouge"
+            elif i in ["jaune","jaunes","jeune","jeunes"]:
+                words_stemmed[n] = "jaune"
+            elif i in ["lun"]:
+                words_stemmed[n] = "lune"
+            elif i in ["triangl"]:
+                words_stemmed[n] = "triangle"
+            elif i in ["ball"]:
+                words_stemmed[n] = "balle"
+            elif i in ["tass"]:
+                words_stemmed[n] = "tasse" 
+            elif i in ["ros"]:
+                words_stemmed[n] = "rose" 
+        
+        print "words_stemmed 179", words_stemmed
+        
+
+
+
+        # To publish the speech information first
+        for word in words_stemmed:
+            audio_response += word + " "
+        audition_features_msg.speech = audio_response
+
+
+
+
+        # Then change "une" to "un"
+        for n, i in enumerate(words_stemmed):
+            if i in ["une"]:
+                words_stemmed[n] = "un"
+
+
+
+
+        words_stemmed_backup = copy.deepcopy(words_stemmed)
+        words_stemmed_reduced = words_stemmed_backup
+        words_stemmed_reduced = sorted(set(words_stemmed_reduced),key=words_stemmed_reduced.index)
+        words_stemmed_reduced = [str(m) for m in words_stemmed_reduced]
+        
+        
+        
+
+        
+        
+        words_accum = words_accum + [words_stemmed_reduced]
+
+
+
+
+
+        n_phrase = len(words_accum)
+        
+        
+        
+        for i in reversed(range(len(words_stemmed_reduced))):
+            print "i =", i
+            flag = False
+#             if not is_ascii(words_accum[n_phrase-1][i]):
+#                 words_accum[n_phrase-1][i] = unicodedata.normalize('NFKD', \
+#                         unicode(words_accum[n_phrase-1][i])).encode('ascii', 'ignore')
+            for j in range(n_phrase - 1):
+                if flag:
+                    break
+                print "j =", j
+                
+                for k in range(len(words_accum[j])):
+                    print "k =", k
+#                     if not is_ascii(words_accum[j][k]):
+#                         words_accum[j][k] = unicodedata.normalize('NFKD', \
+#                                 unicode(words_accum[j][k])).encode('ascii', 'ignore')                    
+                    m = SequenceMatcher(None, words_accum[n_phrase-1][i], words_accum[j][k])
+                    if m.ratio() > 0.8:
+                        print "words_accum[n_phrase - 1]", words_accum[n_phrase - 1]
+                        words_accum[n_phrase - 1].pop(i)
+                        flag = True
+                        break
+
+        # Remove the empty list
+        for i in reversed (range(len(words_accum))):
+            if len(words_accum[i]) == 0:
+                words_accum.pop(i)
+                
+            
+
+            
+            
+
+#         words_len = sum(len(m) for m in words_accum)
+#         for i in range(words_len - 1, words_len - 1 - len(words_stemmed), -1):
+#             for j in range(words_len - len(words_stemmed)):
+#                 m = SequenceMatcher(None, words_accum(i), words_accum(j))
+#                 if m.ratio() > 0.8:
+#                     words_accum.pop(i)
+#                     break
+        print "words_accum", words_accum    # all words acquired of all time
+
+
+
+        # TODO : keywords selection
+
+
+
+
+
+
+
+
+
+
+        # Temporary dict representation
+        words_dictionary = []
+        for i in range(len(words_accum)):
+            words_dictionary += words_accum[i]
+
+        print "words_dictionary_line_155", words_dictionary
+        words_histo = np.zeros(len(words_dictionary)) # create a word_histo for one sample
+
+        
+        
+        ### Be careful of the dictionary property here !
+        if language == "en-us":
+            for word in words_stemmed:                # words_stemmed: here with repeated words
+#                 print word
+#                 if word in ["ring","rings"]:
+#                     word = "ring"
+#                 elif word in ["lego","legos"]:
+#                     word = "lego"
+#                 elif word in ["cup","cups","cop","cops","cap"]:
+#                     word = "cup"
+#                 elif word in ["car","cars", "scar", "scars"]:
+#                     word = "car"
+#                 elif word in ["red","reds", "rent"]:
+#                     word = "red"
+#                 elif word in ["yellow","yellow"]:
+#                     word = "yellow"
+#                 elif word in ["green","greens"]:
+#                     word = "green"
+#                 elif word in ["blue","blues"]:
+#                     word = "blue"
+#                 elif word in ["question", "what", "which"]:
+#                     word = "question"
+#                 else:
+#                     continue
+#                 print word
+                final_response += word + " "
+                index = words_dictionary.index(word) # words_dictionary: here without repeated words
+                words_histo[index] += 1.0
+        
+        else:
+            for word in words_stemmed:
+#                 if word in ["anneau","nano","anneaux","agneau","agneaux","hello",\
+#                             "eau","Hainaut","homme","agneau","agneaux","hainaut",\
+#                              "allô", "allo","âne", "ane"]:
+#                     word = "anneau"
+#                 elif word in ["lego","legos","égaux","croix","luego","lingot",\
+#                               "l'écho","écho","légume","légumes","like",\
+#                               "l'aigle", "aligot", "aigl", "legum", "megot", 'aigle']:
+#                     word = "lego"
+#                 elif word in ["tasse","tasses","tache","taches","place","places",\
+#                               "cintas","classe","classes","Stas",\
+#                               "stas","tafe","taffe","taff"]:
+#                     word = "tasse"
+#                 elif word in ["voiture","voitures"]:
+#                     word = "voiture"
+#                 elif word in ["rouge","rouges"]:
+#                     word = "rouge"
+#                 elif word in ["jaune","jaunes","jeune","jeunes"]:
+#                     word = "jaune"
+#                 elif word in ["vert","verts","verte","vertes","verre","verres",\
+#                               "vers","ouvert","ouverte","ouverts","ouvertes","hanover", "hiver"]:
+#                     word = "vert"
+#                 elif word in ["bleu","bleue","bleus","bleues","blanc",\
+#                               "blanche","blancs","blanches","black"]:
+#                     word = "bleu"
+#                 elif word in ["question", "qu'est-ce", "que", "quoi", \
+#                               "quel", "quelle", "voissa"]:
+#                     word = "question"
+                final_response += word + " "
+                index = words_dictionary.index(word)
+                print "words_dictionary_line_215", words_dictionary
+                words_histo[index] += 1.0
+        
+        
+        
+        
+        
+        
+        
+        
+        """
+        for word in words:
+            if word in ["nano","anneaux"]:
+                word = "anneau"
+            elif word in ["legos","égaux","croix","luego"]:
+                word = "lego"
+            elif word in ["tasses","tache","taches","place","places","cintas","classe","classes"]:
+                word = "tasse"
+            elif word in ["voitures"]:
+                word = "voiture"
+            elif word in ["rouges"]:
+                word = "rouge"
+            elif word in ["jaunes"]:
+                word = "jaune"
+            elif word in ["verts","verte","vertes","verre","verres","vers","ouvert","ouverte","ouverts","ouvertes","hanover"]:
+                word = "vert"
+            elif word in ["bleue","bleus","bleues"]:
+                word = "bleu"
+            if not word in words_dictionary:
+                words_dictionary = np.append(words_dictionary, [word])
+                words_histo = np.append(words_histo, [1.0])
+            else:
+                index = list(words_dictionary).index(word)
+                words_histo[index] += 1.0
+        """
+        
+        if words_histo.sum() != 0.0:
+            print "words_histo", words_histo
+#             words_histo /= words_histo.sum()
+        else:
+            print "no key words"
+    
+    
+    
+    
+    print final_response
+
+#     audition_features_msg.speech = final_response
+    audition_features_msg.words_histogram = words_histo
+    audition_features_msg.words_dictionary = words_dictionary
+    
+    audition_features_msg.complete_words = words
+    audition_features_msg.frames = speech_frames
+    
+    audition_features_pub.publish(audition_features_msg)
+    
+    if final_response == '':
+        status_pub.publish('remove')
+#HERE!!
+    speech_pub.publish(final_response)
+    print '>', final_response
+    print
+
+
+
+
+
+
+
+
+def listener(msg):
+    speech_frames = msg.data
+    threading.Thread(target = speech_recognition, args = (speech_frames, )).start()
+
+
+
+
+
+
+if __name__ == '__main__':
+    speech_pub = rospy.Publisher('speech_recognized', std_msgs.msg.String)
+    status_pub = rospy.Publisher('speech_status', std_msgs.msg.String)
+    audition_features_pub = rospy.Publisher('audition_features', Audition_Features)
+    rospy.init_node('speech_recognition', anonymous=True)
+    rospy.Subscriber("speech_frames", std_msgs.msg.String, speech_recognition)
+    
+    rate      = int(rospy.get_param('~rate',     '16000'))
+    language  = str(rospy.get_param('~language', 'fr')) #en-us
+    print 'rate:    ', rate
+    print 'language:', language
+    print
+    
+    if language == "en-us":
+        words_dictionary = []
+#         words_dictionary = ["ring", "lego", "cup", "car", "red", "yellow", "green", "blue", "question"]
+    else:
+        words_dictionary = []        
+#         words_dictionary = ["anneau", "lego", "tasse", "voiture", "rouge", "jaune", "vert", "bleu", "question"]
+    
+    rospy.spin()

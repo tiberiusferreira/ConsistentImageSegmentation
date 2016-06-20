@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+import cv2
+import numpy as np
+import sensor_msgs.msg
+from primesense import openni2
+from experiment.msg import Image
+import rospy
+from cv_bridge import CvBridge
+
+
+def camera_tutor_frames(msg):
+    global camera_frames_publisher
+    global bridge
+
+    frame = bridge.imgmsg_to_cv(msg, "bgr8")
+    #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    new_msg = Image()
+    new_msg.data = frame.tostring()
+    new_msg.width = msg.width
+    new_msg.height = msg.height
+
+    camera_frames_publisher.publish(new_msg)
+
+if __name__ == '__main__':
+    rospy.init_node('camera_tutor_frames_publisher', anonymous=True)
+    camera_frames_publisher = rospy.Publisher('camera_tutor_frames', Image)
+    rospy.Subscriber('/camera/rgb/image_raw', sensor_msgs.msg.Image, camera_tutor_frames, queue_size=1)
+    bridge = CvBridge()
+
+    rospy.spin()
+
+'''
+OPENNI2_LOCATION = '/home/meka/OpenNI2/Bin/x86-Release/'
+RESOLUTION_X = 640
+RESOLUTION_Y = 480
+FPS = 30
+
+if __name__ == '__main__':
+    rospy.init_node('camera_tutor_frames_publisher', anonymous=True)
+    camera_frames_publisher = rospy.Publisher('camera_tutor_frames', Image)
+    
+    openni2.initialize(OPENNI2_LOCATION)
+    dev = openni2.Device.open_any()
+    rgb_stream = dev.create_color_stream()
+    mode = rgb_stream.get_video_mode()
+    mode.resolutionX = RESOLUTION_X
+    mode.resolutionY = RESOLUTION_Y
+    mode.fps = FPS
+    print mode.resolutionX, 'x', mode.resolutionY, '@', mode.fps, 'fps'
+    
+    rgb_stream.set_video_mode(mode)
+    rgb_stream.start()
+    
+    while not rospy.is_shutdown():
+        frame = rgb_stream.read_frame()
+        data = np.frombuffer(frame.get_buffer_as_uint8(), dtype=np.uint8)
+        img = np.reshape(data, (RESOLUTION_Y, RESOLUTION_X, 3))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        #img = np.fliplr(img)
+        #img = np.rot90(img, 2)
+        
+        msg = Image()
+        msg.data = img.tostring()
+        msg.width = RESOLUTION_X
+        msg.height = RESOLUTION_Y
+        camera_frames_publisher.publish(msg)
+
+        print rgb_stream.get_video_mode()
+'''

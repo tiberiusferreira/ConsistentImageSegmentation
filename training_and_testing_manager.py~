@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+
+import collections
+import colorsys
+import rospy
+import numpy as np
+import cv2
+from experiment.msg import Histograms_List
+from experiment.msg import Detected_Objects_List
+from experiment.msg import Detected_Object_Words_Histogram
+from experiment.msg import Detected_Objects_Words_Histogram_List
+from multimodal.online_learner import OnlineLearner
+
+def train_mode(msg):
+    global descriptors_list_deque
+    histograms_list = msg.histograms_list
+    descriptors_list = [map(np.array,
+                            [
+                            histograms.shape_histogram
+                            + histograms.colors_histogram
+                            #+ histograms.angles_histogram
+                            , histograms.words_histogram
+                            ]) for histograms in histograms_list]
+    descriptors_list_deque.appendleft(descriptors_list)
+
+def test_mode(msg):
+    global testing_objects_list, testing
+    if not testing:
+        print 'new test'
+        testing_objects_list = msg.detected_objects_list
+
+if __name__ == '__main__':
+    N_COLORS = 40
+    descriptors_list_deque = collections.deque()
+    testing_objects_list = []
+    
+    rospy.init_node('training_and_testing_manager', anonymous=True)
+    rospy.Subscriber('histograms_list', Histograms_List, train_mode, queue_size=1)
+    rospy.Subscriber('detected_objects_list', Detected_Objects_List, test_mode, queue_size=1)
+    detected_objects_words_histogram_list_publisher = rospy.Publisher('detected_objects_words_histogram_list', Detected_Objects_Words_Histogram_List)
+    
+    LEXICON_FILE = '/home/fabio/experiment/library_NMF/lexicon'
+    N_TRAIN = 400 #50
+    K = 7
+    OL = OnlineLearner(LEXICON_FILE, K, N_TRAIN, keep_dico=False)
+    
+    testing = False
+    trained_once = False
+    while not rospy.is_shutdown():
+        # TRAINING
+        while descriptors_list_deque:
+            print 'train'
+            descriptors_list = descriptors_list_deque.pop()
+            OL.treat_new_multimodal_examples_list(descriptors_list)
+            trained_once = True
+        
+        # TESTING
+        detected_objects_words_histogram_list = []
+        testing = True
+        testing_objects_list_copy = list(testing_objects_list)
+        testing = False
+        img = np.zeros((1000, max(640 + 100, (K+3) * 150), 3), dtype=np.uint8)
+        for testing_object in testing_objects_list_copy:
+            features = testing_object.features
+            vector = np.array(
+             features.shape_histogram
+             + features.colors_histogram
+            #+ features.angles_histogram
+            )
+            text_hist = OL.treat_new_image_descriptor(vector)
+            
+            center_x = testing_object.center_x
+            center_y = testing_object.center_y
+            width = testing_object.image.width
+            height = testing_object.image.height
+            data = np.fromstring(testing_object.image.data, dtype=np.uint8)
+            data = np.reshape(data, (height, width, 3))
+            img[center_y-height/2:center_y+height/2, center_x-width/2:center_x+width/2] = data
+            
+            for i_color in range(N_COLORS):
+                color = float(i_color) / N_COLORS
+                r, g, b = colorsys.hsv_to_rgb(color, 1.0, 1.0)
+                r = int(r * 255)
+                g = int(g * 255)
+                b = int(b * 255)
+                cv2.line(img, (center_x-width/2 + i_color * 2, center_y+height/2 + 50), (center_x-width/2 + i_color * 2, center_y+height/2 + 50 - int(features.colors_histogram[i_color] * 100)), (b, g, r), 1)
+            
+            if text_hist is not None:
+                detected_object_words_histogram = Detected_Object_Words_Histogram()
+                detected_object_words_histogram.detected_object = testing_object
+                detected_object_words_histogram.words_histogram = text_hist[0].tolist()
+                detected_objects_words_histogram_list.append(detected_object_words_histogram)
+                
+                for i, val in enumerate(detected_object_words_histogram.words_histogram):
+                    #if val < 0.5:
+                    #    continue
+                    word = OL.get_word(i)
+                    cv2.putText(img, word, (center_x+width/2+10, center_y-height/2+i*10), cv2.FONT_HERSHEY_PLAIN, val*3, (255, 255, 255))
+        
+        OL._reload_lexicon()
+        for i, word in enumerate(OL._lexicon):
+            cv2.putText(img, word, (640 + 50, 50+i*20), cv2.FONT_HERSHEY_PLAIN, 1., (255, 255, 255))
+        
+        if trained_once:
+            dico = OL._learner.get_dico()
+            for i_K in range(K):
+                shape_histogram = dico[i_K][0:2500]
+                colors_histogram = dico[i_K][2500:2500+N_COLORS]
+                words_histogram = dico[i_K][2500+N_COLORS:]
+                
+                shape_histogram = shape_histogram * 255 / np.max(shape_histogram)
+                shape_histogram = shape_histogram.astype(np.uint8)
+                shape_pixels = np.reshape(shape_histogram, (50, 50))
+                shape_pixels = cv2.cvtColor(shape_pixels, cv2.COLOR_GRAY2RGB)
+                img[480+50:480+50+50, (i_K+1)*150:(i_K+1)*150+50] = shape_pixels
+                
+                for i_color in range(N_COLORS):
+                    color = float(i_color) / N_COLORS
+                    r, g, b = colorsys.hsv_to_rgb(color, 1.0, 1.0)
+                    r = int(r * 255)
+                    g = int(g * 255)
+                    b = int(b * 255)
+                    cv2.line(img, ((i_K+1)*150 + i_color*2, (480+50+50+50)), ((i_K+1)*150 + i_color*2, 480+50+50+50 - int(colors_histogram[i_color] * 100)), (b, g, r), 1)
+                
+                for i, val in enumerate(words_histogram):
+                    word = OL.get_word(i)
+                    cv2.putText(img, word, ((i_K+1)*150, 480+50+50+50+50+i*20), cv2.FONT_HERSHEY_PLAIN, val*7, (255, 255, 255))
+                
+                '''
+                nb_steps = 250
+                range_step = 2500 / nb_steps
+                for i_range in range(nb_steps):
+                    average = np.average(shape_histogram[i_range*range_step:(i_range+1)*range_step])
+                    cv2.line(img, (640 + 50 + i_range, (i_K+1) * 50), (640 + 50 + i_range, (i_K+1) * 50 - int(average * 10000)), (255, 255, 255), 1)
+                '''
+        
+        cv2.imshow('words', img)
+        cv2.waitKey(1)
+        detected_objects_words_histogram_list_publisher.publish(detected_objects_words_histogram_list)

@@ -1,0 +1,3 @@
+ rosrun dynamic_reconfigure dynparam set /camera/driver data_skip 3
+rosbag record -O chicken.bag --duration=40 /camera/rgb/image_rect_color /camera/depth_registered/image_raw
+rosbag play -r 1 --loop

@@ -1,0 +1,337 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import colorsys
+import cv2
+import math
+import numpy as np
+import os
+import random
+import sys
+import rospy
+
+from NMF_Library.online_learner import OnlineLearner
+from robot_interaction_experiment.msg import Data_To_Visualize
+
+
+OBJECTS_IMAGE_SIZE = 30
+max_histogram_size = 50
+N_COLORS = 80
+font_size = 9
+max_text_length = 45
+border = 5
+word_threshold = 0.05
+
+categories = ["anneau", "lego", "tasse", "voiture"]
+colors     = ["rouge", "jaune", "vert", "bleu"]
+
+
+def show_histograms(screen, words_dictionary, histograms, x_shift=0, y_shift=0, message=''):
+    n_words = len(words_dictionary)
+    half_n_words = int(math.ceil(n_words/2.0))
+    
+    shape_histogram, colors_histogram, words_histogram = histograms
+    # shape
+    shape_data = np.array(shape_histogram)
+    shape_data = shape_data * 255 / np.max(shape_data)
+    shape_data = shape_data.astype(np.uint8)
+    shape_data = cv2.cvtColor(shape_data, cv2.COLOR_GRAY2RGB)
+    shape_data = np.reshape(shape_data, (OBJECTS_IMAGE_SIZE, OBJECTS_IMAGE_SIZE, 3))
+    screen[y_shift:y_shift+OBJECTS_IMAGE_SIZE, x_shift:x_shift+OBJECTS_IMAGE_SIZE] = shape_data
+    # Ki
+    cv2.putText(screen, message, (x_shift+max_text_length, y_shift+font_size), cv2.FONT_HERSHEY_SIMPLEX, font_size/30.0, (255, 255, 255))
+    # colors
+    y_shift += OBJECTS_IMAGE_SIZE+border+max_histogram_size
+    for i_color in range(N_COLORS):
+        color = float(i_color) / N_COLORS
+        r, g, b = colorsys.hsv_to_rgb(color, 1.0, 1.0)
+        r = int(r * 255)
+        g = int(g * 255)
+        b = int(b * 255)
+        cv2.line(screen, (x_shift+i_color, y_shift), (x_shift+i_color, y_shift-int(colors_histogram[i_color] * max_histogram_size)), (b, g, r), 1)
+    # words
+    y_shift += border+font_size
+    if words_histogram != None:
+        for i, val in enumerate(words_histogram):
+            word = words_dictionary[i]
+            col = min(val*255, 255) #min(int((2.0/(1+math.exp(-10*val)) -1) * 255), 255) #min(val*255, 255)
+            color = (col, col, col)
+            '''
+            if val >= 0.05:
+                color = (255, 255, 255)
+            else:
+                color = (50, 50, 50)
+            '''
+            
+            if val >= word_threshold:
+                word = ">"+word
+                color = (val*255, val*255, val*255)
+            
+            cv2.putText(screen, word, (x_shift+max_text_length*(i/half_n_words), y_shift+(i%half_n_words)*font_size), cv2.FONT_HERSHEY_SIMPLEX, font_size/30.0, color)
+
+    return screen
+
+
+def show_everything(screen, step, words_dictionary, input_histograms_list, NMF_dictionaries, scores, message=''):
+    input_histograms = input_histograms_list[step][0]
+    input_histograms_reconstructed = input_histograms_list[step][1]
+    n_data = len(input_histograms_list)
+    if NMF_dictionaries != None:
+        NMF_dictionary = NMF_dictionaries[step]
+        K = len(NMF_dictionary)
+    else:
+        K = 0
+    n_words = len(words_dictionary)
+    half_n_words = int(math.ceil(n_words/2.0))
+    
+    histograms_height = OBJECTS_IMAGE_SIZE+border+max_histogram_size+border+font_size*half_n_words
+    screen_width = max(border+1+border+(max_text_length+border)*2 +border+1+border+ (border+(max_text_length+border)*2)*K+border, border+border+(max_text_length+border)*2*16+1+border)
+    screen_height = border+font_size+border+1+border+histograms_height+border+1+border+1+border+histograms_height+border+1+border+1+border+histograms_height+border+histograms_height+border+max_histogram_size+border+font_size+border+max_histogram_size+border+font_size+border+1+border
+    screen = np.zeros((screen_height, screen_width, 3), dtype=np.uint8)    
+    
+    # text
+    x_shift = border
+    y_shift = border+font_size
+    cv2.putText(screen, message, (x_shift, y_shift), cv2.FONT_HERSHEY_SIMPLEX, font_size/30.0, (255, 255, 255))
+    
+    # NMF dictionary
+    x_shift = border
+    y_shift += border
+    cv2.rectangle(screen, (x_shift, y_shift), (x_shift+border+(max_text_length+border)*2*K, y_shift+border+histograms_height+border), (255, 255, 255), 1)
+    x_shift += 1+border
+    y_shift += 1+border
+    if NMF_dictionaries != None:
+        for Ki, NMF_histogram in enumerate(NMF_dictionary):
+            screen = show_histograms(screen, words_dictionary, NMF_histogram, x_shift, y_shift, 'dico ' + str(Ki))
+            x_shift += (max_text_length+border)*2
+    
+    # input histogram
+    x_shift = border
+    y_shift += border+histograms_height+border
+    cv2.rectangle(screen, (x_shift, y_shift), (x_shift+border+(max_text_length+border)*2*2, y_shift+border+histograms_height+border), (255, 255, 255), 1)
+    x_shift += 1+border
+    y_shift += 1+border
+    screen = show_histograms(screen, words_dictionary, input_histograms, x_shift, y_shift, 'input')
+    x_shift += (max_text_length+border)*2
+    if input_histograms_reconstructed != None:
+        screen = show_histograms(screen, words_dictionary, input_histograms_reconstructed, x_shift, y_shift, 'rec')
+    
+    if scores != None:
+        # the 16 objects' test
+        x_shift = border
+        y_shift += border+histograms_height+border
+        cv2.rectangle(screen, (x_shift, y_shift), (x_shift+border+(max_text_length+border)*2*16, y_shift+border+histograms_height+border+histograms_height+border+max_histogram_size+border+font_size+border+max_histogram_size+border+font_size+border), (255, 255, 255), 1)
+        x_shift += 1+border
+        y_shift += 1+border
+        if scores != None:
+            testing_objects, [total_vision_score, total_words_score] = scores
+            for i_object in range(16):
+                [[object_non_reconstructed, object_reconstructed_histogram], [vision_score, words_score]] = testing_objects[i_object]
+                screen = show_histograms(screen, words_dictionary, object_non_reconstructed, x_shift, y_shift, categories[i_object/4][0:2]+"-"+colors[i_object%4][0:2])
+                screen = show_histograms(screen, words_dictionary, object_reconstructed_histogram, x_shift, y_shift+border+histograms_height+border, "rec")
+                # objects scores
+                for i_step in range(n_data):
+                    if i_step == step:
+                        color = (255, 255, 255)
+                    else:
+                        color = (100, 100, 100)
+                    val = testing_objects[i_object][1][1]
+                    cv2.line(screen, (x_shift+i_step, y_shift+border+histograms_height+histograms_height+border+max_histogram_size), (x_shift+i_step, y_shift+border+histograms_height+histograms_height+border+max_histogram_size-int(val*max_histogram_size)), color, 1)
+                cv2.putText(screen, "{0:.5f}".format(vision_score)+","+"{0:.5f}".format(words_score), (x_shift, y_shift+border+histograms_height+histograms_height+border+max_histogram_size+border+font_size), cv2.FONT_HERSHEY_SIMPLEX, font_size/30.0, (255, 255, 255))
+                x_shift += (max_text_length+border)*2
+            # total score
+            x_shift = border+1+border
+            y_shift += histograms_height+border+histograms_height+border+max_histogram_size+border+font_size+border+max_histogram_size
+            for i_step in range(n_data):
+                if i_step == step:
+                    color = (255, 255, 255)
+                else:
+                    color = (100, 100, 100)
+                val = testing_objects[i_step][1][1]
+                cv2.line(screen, (x_shift+i_step, y_shift), (x_shift+i_step, y_shift-int(val*max_histogram_size)), color, 1)
+            y_shift += border+font_size
+            cv2.putText(screen, "{0:.5f}".format(total_vision_score)+","+"{0:.5f}".format(total_words_score), (x_shift, y_shift), cv2.FONT_HERSHEY_SIMPLEX, font_size/30.0, (255, 255, 255))
+    
+    return screen
+
+previous_scores = None
+
+def treat_data(data_to_visualize):
+    global record_file_name
+    global record_index
+    global image
+    global last_NMF_dictionary
+    global previous_scores
+    
+    message                  = data_to_visualize.message
+    K                        = data_to_visualize.K
+    n_iterations             = data_to_visualize.n_iterations
+    words_dictionary         = data_to_visualize.words_dictionary
+    n_words = len(words_dictionary)
+    input_histograms         = data_to_visualize.input_histograms
+    NMF_dictionaries         = data_to_visualize.NMF_dictionaries
+    reconstructed_histograms = data_to_visualize.reconstructed_histograms
+    
+    with open(record_file_name, "a") as record_file:
+        record_file.write("# informations about data number " + str(record_index) + "\n")
+        record_file.write(message + "\n")
+        record_file.write(str(K) + "\n")
+        record_file.write(str(n_iterations) + "\n")
+        record_file.write(",".join(words_dictionary) + "\n")
+        record_file.write("# input histograms\n")
+        record_file.write(",".join([str(val) for val in input_histograms.shape_histogram]) + "\n")
+        record_file.write(",".join([str(val) for val in input_histograms.colors_histogram]) + "\n")
+        record_file.write(",".join([str(val) for val in input_histograms.words_histogram]) + "\n")
+        if NMF_dictionaries != []:
+            print "input data"
+            for Ki, dico_histograms in enumerate(NMF_dictionaries):
+                record_file.write("# dictionary histograms number" + str(Ki) + "\n")
+                record_file.write(",".join([str(val) for val in dico_histograms.shape_histogram]) + "\n")
+                record_file.write(",".join([str(val) for val in dico_histograms.colors_histogram]) + "\n")
+                record_file.write(",".join([str(val) for val in dico_histograms.words_histogram]) + "\n")
+            last_NMF_dictionary = [[[NMF_dico.shape_histogram, NMF_dico.colors_histogram, NMF_dico.words_histogram] for NMF_dico in NMF_dictionaries]]
+            ###
+            scores = None
+            ''' '''
+            scores = []
+            total_vision_score = 0.0
+            total_words_score = 0.0
+            online_learner = OnlineLearner(K, n_iterations, keep_dico=True)
+            online_learner._learner.set_dico(np.array([histograms.shape_histogram + histograms.colors_histogram + histograms.words_histogram for histograms in NMF_dictionaries]), [OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS, n_words], [OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS, n_words])
+            for i_object in range(16):
+                vision_example = np.array(the_16_objects_vision_histograms_list[i_object][0] + the_16_objects_vision_histograms_list[i_object][1])
+                reconstructed_histograms = online_learner.treat_new_image_descriptor(vision_example)[0]
+                object_reconstructed_histograms = [reconstructed_histograms[0:OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE], reconstructed_histograms[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE:OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS:], reconstructed_histograms[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS:]]
+                shape_histogram = the_16_objects_vision_histograms_list[i_object][0]
+                colors_histogram = the_16_objects_vision_histograms_list[i_object][1]
+                words_histogram = np.array([0.0]*(i_object/4)+[1.0]+[0.0]*(3-i_object/4) + [0.0]*(i_object%4)+[1.0]+[0.0]*(3-i_object%4 + 1))
+                words_histogram /= np.sum(words_histogram)
+                object_non_reconstructed_histograms = [shape_histogram, colors_histogram, words_histogram.tolist()]
+                shape_histogram = np.array(shape_histogram)
+                colors_histogram = np.array(colors_histogram)
+                words_histogram = np.array(words_histogram)
+                
+                reconstructed_shape_histogram = np.array(reconstructed_histograms[0:OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE])
+                reconstructed_shape_histogram /= np.sum(reconstructed_shape_histogram)
+                reconstructed_colors_histogram = np.array(reconstructed_histograms[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE:OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS])
+                reconstructed_colors_histogram /= np.sum(reconstructed_colors_histogram)
+                shape_error = np.sum(np.abs(shape_histogram - reconstructed_shape_histogram)) / 2.0
+                colors_error = np.sum(np.abs(colors_histogram - reconstructed_colors_histogram)) / 2.0
+                vision_error = (shape_error + colors_error) / 2.0
+                vision_score = 1.0 - vision_error
+                
+                reconstructed_words_histogram = np.array(reconstructed_histograms[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS:])
+                words_score = 1 - np.abs(np.sum(reconstructed_words_histogram) - 1)
+                #reconstructed_words_histogram /= np.sum(reconstructed_words_histogram)
+                #words_error = np.sum(np.abs(words_histogram - reconstructed_words_histogram)) / 2.0
+                #words_score = 1.0 - words_error
+                
+                '''
+                categories_score = 0.0
+                continue_categories_score = True
+                colors_score = 0.0
+                continue_colors_score = True
+                
+                for i_word, val in enumerate(reconstructed_histograms[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS:]):
+                    word = words_dictionary[i_word]
+                    for i in range(4):
+                        if not continue_categories_score:
+                            break
+                        if word in accepted_categories_names[i]:
+                            if val >= word_threshold:
+                                if i == i_object/4:
+                                    categories_score = 0.5
+                                else:
+                                    categories_score = 0.0
+                                    continue_categories_score = False
+                    for i in range(4):
+                        if not continue_colors_score:
+                            break
+                        if word in accepted_colors_names[i]:
+                            if val >= word_threshold:
+                                if i == i_object%4:
+                                    colors_score = 0.5
+                                else:
+                                    colors_score = 0.0
+                                    continue_colors_score = False
+                words_score = categories_score + colors_score
+                '''
+                
+                scores.append([[object_non_reconstructed_histograms, object_reconstructed_histograms], [vision_score, words_score]])
+                total_vision_score += vision_score
+                total_words_score += words_score
+            
+            total_vision_score /= 16
+            total_words_score /= 16
+            scores = [scores, [total_vision_score, total_words_score]]
+            ''' '''
+            previous_scores = scores
+            ###
+            image = show_everything(image, 0, words_dictionary, [[[input_histograms.shape_histogram, input_histograms.colors_histogram, input_histograms.words_histogram], None]], last_NMF_dictionary, scores, message='')
+        else:
+            print "test data"
+            record_file.write("# reconstructed histograms\n")
+            record_file.write(",".join([str(val) for val in reconstructed_histograms.shape_histogram]) + "\n")
+            record_file.write(",".join([str(val) for val in reconstructed_histograms.colors_histogram]) + "\n")
+            record_file.write(",".join([str(val) for val in reconstructed_histograms.words_histogram]) + "\n")
+            image = show_everything(image, 0, words_dictionary, [[[input_histograms.shape_histogram, input_histograms.colors_histogram, input_histograms.words_histogram], [reconstructed_histograms.shape_histogram, reconstructed_histograms.colors_histogram, reconstructed_histograms.words_histogram]]], last_NMF_dictionary, previous_scores, message='')
+        record_file.write("\n")
+    print "recorded", "(" + str(record_index) + ")"
+    record_index += 1
+
+
+if __name__ == '__main__':
+    record_file_index = 0
+    record_index = 0
+    image = np.zeros((500, 500, 3), dtype=np.uint8)
+    last_NMF_dictionary = None
+    rospy.init_node('visualizer', anonymous=True)
+    language  = str(rospy.get_param('~language', 'fr')) #en-us
+    
+    while True:
+        record_file_name = "record_" + str(record_file_index)
+        if not os.path.isfile(record_file_name):
+            break
+        record_file_index += 1
+    
+    directory_path = os.path.dirname(os.path.realpath(__file__))
+    if language == "en-us":
+        testing_file_path = "directory_path/NMF_Tools/testing_file_en"
+    else:
+        testing_file_path = "directory_path/NMF_Tools/testing_file"
+    with open(testing_file_path, 'r') as testing_file:
+        accepted_categories_names = []
+        accepted_colors_names = []
+        the_16_objects_vision_histograms_list = []
+        
+        for i_category in range(4):
+            accepted_category_names = testing_file.readline()[:-1].split(',')
+            accepted_categories_names.append(accepted_category_names)
+        testing_file.readline()
+        print 'accepted categories:', accepted_categories_names
+        for i_color in range(4):
+            accepted_color_names = testing_file.readline()[:-1].split(',')
+            accepted_colors_names.append(accepted_color_names)
+        testing_file.readline()
+        print 'accepted colors:', accepted_colors_names
+        
+        for i_category in range(4):
+            for i_color in range(4):
+                # TODO: rectify inversion of color and shape histograms
+                shape_histogram = [float(val) for val in testing_file.readline()[:-1].split(',')]
+                colors_histogram = [float(val) for val in testing_file.readline()[:-1].split(',')]
+                vision_histograms = [shape_histogram, colors_histogram]
+                the_16_objects_vision_histograms_list.append(vision_histograms)
+                testing_file.readline()
+    
+    print "data will be recorded in", record_file_name
+    print
+    
+    rospy.Subscriber('data_to_visualize', Data_To_Visualize, treat_data, queue_size=1)
+    
+    while not rospy.is_shutdown():
+        if image != None:
+            cv2.imshow("data", image)
+            k = cv2.waitKey(1)
+            if k == 1048603: # escape
+                break

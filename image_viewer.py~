@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import pyaudio
+import rospy
+import std_msgs.msg
+from experiment.msg import Image
+import numpy as np
+import cv2
+
+def image_viewer(msg):
+    global topic
+    data = np.fromstring(msg.data, dtype=np.uint8)
+    resolution_x = msg.width
+    resolution_y = msg.height
+    img = np.reshape(data, (resolution_y, resolution_x, 3))
+    cv2.imshow(topic, img)
+    cv2.waitKey(1)
+
+if __name__ == '__main__':
+    topic = ''
+    rospy.init_node('image_viewer', anonymous=True)
+    topic = str(rospy.get_param('~topic', ''))
+    if topic == '':
+        print 'usage: rosrun experiment image_viewer _topic:=<topic_name>'
+        exit()
+    
+    cv2.namedWindow(topic, cv2.WINDOW_NORMAL)
+    rospy.Subscriber(topic, Image, image_viewer, queue_size=1)
+    rospy.spin()
+

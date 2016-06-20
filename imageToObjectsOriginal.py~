@@ -1,0 +1,522 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+'''
+Fichier réalisé par François BIDET
+inspiré du fichier 'image_to_objects_version1.py' réalisé par Dong FEI
+'''
+
+# importations
+import rospy
+import cv2
+import numpy as np
+
+from scipy import ndimage
+
+from cv_bridge import CvBridge, CvBridgeError
+
+from sensor_msgs.msg import Image
+
+from std_msgs.msg import String
+
+from image3d.msg import Vision_Features
+from image3d.msg import Image_tostring
+from image3d.msg import Detected_Object
+from image3d.msg import Detected_Objects_List
+
+# constantes et paramètrer
+HAUTEUR = 480
+LARGEUR = 640
+MAIN_WINDOW_NAME = "principale"
+MIN_AREA = 1000
+N_COLORS = 80
+
+TRACKBAR_NB_PROFONDEUR_NAME = "Nb img profondeur"
+NB_IMG_PROFONDEUR_MAX = 100
+NB_IMG_PROFONDEUR = 1
+
+AFFICHAGE_PROFONDEUR = "Afficher img profondeur"
+AFFICHER_PROFONDEUR = False
+AFFICHAGE_COULEUR = "Afficher img couleur"
+AFFICHER_COULEUR = False
+
+CAPTURE_PROFONDEUR = "capture profondeur"
+VAL_CAPTURE_PROFONDEUR = 0.04
+
+# __TEST__
+DCOULEUR_TITRE = "dcouleur"
+DCOULEUR_VALUE = 10
+
+# définitions générales
+bridge = CvBridge()
+
+indiceImgProfondeur = 0
+dernieresImgProfondeur = [0 for i in range(0,NB_IMG_PROFONDEUR_MAX)]
+img_profondeur_traite = 0
+
+img_couleur_traite = 0
+
+init_couleur = False
+init_profondeur = False
+
+def nothing(x) :
+	pass
+
+# les fonctions appelées par onChange
+def callback_mouse(event,x,y,flags,param) :
+	if event==cv2.EVENT_LBUTTONDBLCLK : # double click
+		print "[x,y] : [%s,%s]" % (x,y)
+
+def changeDCOULEUR(n) :
+	global DCOULEUR_VALUE
+	DCOULEUR_VALUE = n
+
+def changeCapture(n) :
+	global VAL_CAPTURE_PROFONDEUR
+	
+	if n == 0 : n = 1
+	VAL_CAPTURE_PROFONDEUR = float(n) / 100
+
+def changeProfondeur(n) :
+	global NB_IMG_PROFONDEUR
+	
+	NB_IMG_PROFONDEUR = n
+	if NB_IMG_PROFONDEUR <= 0 :
+		NB_IMG_PROFONDEUR = 1
+
+def changeAffProfondeur(b) :
+	global AFFICHER_PROFONDEUR
+	
+	if b == 1 :
+		AFFICHER_PROFONDEUR = True
+	else :
+		AFFICHER_PROFONDEUR = False
+
+def changeAffCouleur(b) :
+	global AFFICHER_COULEUR
+	
+	if b == 1 :
+		AFFICHER_COULEUR = True
+	else :
+		AFFICHER_COULEUR = False
+
+# autres fonctions
+def decalerMask(mask) :
+	# décale le masque pour l'aligner avec l'image
+	M = cv2.moments(mask)
+	x = int(M['m10']/M['m00'])
+	y = int(M['m01']/M['m00'])
+	
+	distance = np.amin(img_profondeur_traite)
+	
+	dx = int(-25 / distance * x / LARGEUR) # choix de l'équation arbitraire
+	dy = int(0.05 * (HAUTEUR / 2 - y)) # choix de l'équation arbitraire
+	m = np.float64([[1,0,dx],[0,1,dy]])
+	return cv2.warpAffine(mask,m, (LARGEUR,HAUTEUR))
+
+def trouveMax(img) :
+	img2 = nettoyer(img,0)
+	return np.amax(img2)
+
+def nettoyer(img,n) :
+	# fixe les valeurs non finies (nan ou infinies) à n
+	mask = np.isfinite(img)
+	return np.where(mask,img,n)
+
+def callback_depth(msg) :
+	# traitement du message contenant l'image de profondeur
+	
+	global indiceImgProfondeur, dernieresImfProfondeur, img_profondeur_traite, init_profondeur
+	
+	# récupération de l'image
+	try :
+		img = bridge.imgmsg_to_cv2(msg, "passthrough")
+	except CvBridgeError, e :
+		print e
+		return
+	
+	# nettoyage de l'image
+	imgNettoyee = nettoyer(img,255)
+	
+	# enregistrement de l'image dans la liste des dernières images de profondeurs
+	dernieresImgProfondeur[indiceImgProfondeur] = np.copy(imgNettoyee)
+	indiceImgProfondeur += 1
+	if indiceImgProfondeur >= NB_IMG_PROFONDEUR :
+		indiceImgProfondeur = 0
+	
+	# génére une image comme moyenne des dernières enregistrées
+	img_profondeur_traite = np.copy(dernieresImgProfondeur[0])
+	for i in range(1,NB_IMG_PROFONDEUR) :
+		img_profondeur_traite += dernieresImgProfondeur[i]
+	
+	img_profondeur_traite /= NB_IMG_PROFONDEUR
+	
+	init_profondeur = True # confirme la génération de l'image de profondeur
+	
+	if init_couleur and init_profondeur : # si au moins une image couleur et une image de profondeur ont été générées
+		# génère un masque # __SELECTION__
+		genererMaskObjets()
+#		genererMaskObjets2()
+#		genererMaskObjets3()
+	
+	if AFFICHER_PROFONDEUR :
+		# affichage de l'image obtenue après traitement
+		cv2.imshow("profondeur",img_profondeur_traite / trouveMax(img))
+		cv2.waitKey(1)
+	else :
+		cv2.destroyWindow("profondeur")
+
+def callback_rgb(msg) :
+	# traitement du message contenant l'image couleur
+	
+	global img_couleur_traite, init_couleur
+	
+	# récupération de l'image
+	try :
+		img=bridge.imgmsg_to_cv2(msg, "bgr8")
+	except CvBridgeError, e :
+		print e
+		return
+	
+	img_couleur_traite = np.copy(img)
+	
+	init_couleur = True # confirme la génération de l'image couleur
+	
+	if AFFICHER_COULEUR :
+		# affichage de l'image obtenue après traitement
+		cv2 .imshow("couleur", img_couleur_traite)
+		cv2.waitKey(1)
+	else :
+		cv2.destroyWindow("couleur")
+
+def genererMaskObjets() :
+	# générer un mask qui fait apparaître les objets
+	# utilise l'image de profondeur pour sélectionner les points les plus proches
+	
+	# trouve le point le plus proche
+	plusProche = np.amin(img_profondeur_traite)
+	
+	# génère un mask avec les points les plus proches
+	img_detection = np.where(img_profondeur_traite < plusProche + VAL_CAPTURE_PROFONDEUR,img_profondeur_traite,0)
+	ret, mask = cv2.threshold(img_detection,0.1,255,cv2.THRESH_BINARY)
+	mask = np.array(mask, dtype = np.uint8) # convert to 8-bit
+	
+#	mask = decalerMask(mask)
+	
+	# créer l'image en remplassant par du noir les parties non sélectionnées par le masque
+	img_filtree = cv2.bitwise_and(img_couleur_traite,img_couleur_traite,mask=mask)
+	
+	objects_detector(img_filtree)
+
+def genererMaskObjets2() :
+	# générer un mask qui fait apparaître les objets
+	# utilise l'image de profondeur pour sélectionner les points les plus proches et étend la sélection en fonction des couleurs hsv
+	
+	# __EN_COURS__
+	
+	# trouve le point le plus proche
+	plusProche = np.amin(img_profondeur_traite)
+	
+	# génère un mask avec les points les plus proches
+	img_detection = np.where(img_profondeur_traite < plusProche + VAL_CAPTURE_PROFONDEUR,img_profondeur_traite,0)
+	ret, mask = cv2.threshold(img_detection,0.1,255,cv2.THRESH_BINARY)
+	mask = np.array(mask, dtype = np.uint8) # convert to 8-bit
+	
+	# décale le masque pour l'aligner approximativement avec l'image couleur
+#	mask = decalerMask(mask)
+	
+	
+	# trouve le barycentre
+	moments = cv2.moments(mask)
+	xMin = int(moments['m10']/moments['m00'])
+	yMin = int(moments['m01']/moments['m00'])
+	
+	hsv = cv2.cvtColor(img_couleur_traite,cv2.COLOR_BGR2HSV)
+	hue,sat,val = cv2.split(hsv)
+	cv2.circle(val,(xMin,yMin),5,(255,0,0)) # repère le barycentre du masque
+	
+	#filtre1
+	hsv_filtre1 = cv2.bitwise_and(hsv,hsv,mask=mask)
+	
+	Href = hsv[yMin,xMin,0]
+	Hbas = max(0,Href - DCOULEUR_VALUE)
+	Hhaut = min(180,Href + DCOULEUR_VALUE)
+	
+	limiteBas = np.array([Hbas,50,50])
+	limiteHaut = np.array([Hhaut,255,255])
+	
+	result = cv2.inRange(hsv_filtre1,limiteBas,limiteHaut)
+	
+	
+	cv2.imshow("select",result)
+	
+	
+	cv2.imshow("hue",hue)
+	cv2.imshow("sat",sat)
+	cv2.imshow("val",val)
+	
+	cv2.waitKey(1)
+	
+	# créer l'image en remplassant par du noir les parties non sélectionnées par le masque
+	img_filtree = cv2.bitwise_and(img_couleur_traite,img_couleur_traite,mask=result)
+	
+	objects_detector(img_filtree)
+
+def genererMaskObjets3() :
+	# générer un mask qui fait apparaître les objets
+	# utilise l'image de profondeur pour sélectionner les points les plus proches et étend la sélection en fonction des couleurs rgb
+	
+	# __EN_COURS__
+	
+	# trouve le point le plus proche
+	plusProche = np.amin(img_profondeur_traite)
+	
+	# génère un mask avec les points les plus proches
+	img_detection = np.where(img_profondeur_traite < plusProche + VAL_CAPTURE_PROFONDEUR,img_profondeur_traite,0)
+	ret, mask = cv2.threshold(img_detection,0.1,255,cv2.THRESH_BINARY)
+	mask = np.array(mask, dtype = np.uint8) # convert to 8-bit
+	
+	# décale le masque pour l'aligner approximativement avec l'image couleur
+#	mask = decalerMask(mask)
+	
+	# trouve le barycentre
+	moments = cv2.moments(mask)
+	xMin = int(moments['m10']/moments['m00'])
+	yMin = int(moments['m01']/moments['m00'])
+	
+	# application du premier filtre
+	img_filtree1 = cv2.bitwise_and(img_couleur_traite,img_couleur_traite,mask=mask)
+	cv2.imshow("filtre1", img_filtree1)
+	
+	# filtre couleurs
+	couleursBas = np.array([max(0,img_filtree1[yMin,xMin,0] - DCOULEUR_VALUE),max(0,img_filtree1[yMin,xMin,1] - DCOULEUR_VALUE),max(0,img_filtree1[yMin,xMin,2] - DCOULEUR_VALUE)])
+	couleursHaut = np.array([min(255,img_filtree1[yMin,xMin,0] + DCOULEUR_VALUE),min(255,img_filtree1[yMin,xMin,1] + DCOULEUR_VALUE),min(255,img_filtree1[yMin,xMin,2] + DCOULEUR_VALUE)])
+	
+	mask2 = cv2.inRange(img_filtree1, couleursBas, couleursHaut)
+	img_filtree2 = cv2.bitwise_and(img_filtree1,img_filtree1,mask=mask2)
+	
+	cv2.imshow("result", img_filtree2)
+	
+	bleu, vert, rouge = cv2.split(img_couleur_traite)
+	
+#	cv2.imshow("bleu",bleu)
+#	cv2.imshow("vert",vert)
+#	cv2.imshow("rouge",rouge)
+	cv2.waitKey(1)
+
+def objects_detector(img):
+	resolution_x = LARGEUR
+	resolution_y = HAUTEUR
+	
+	# convertit l'image en HSV
+	hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+	
+	# définit la plage de valeurs
+	hh = 255
+	hl = 0
+	sh = 255
+	sl = 0
+	vh = 255
+	vl = 1 # pour ignorer le noir en arrière plan
+	
+	lowerBound = np.array([hl, sl, vl],np.uint8)
+	upperBound = np.array([hh, sh, vh],np.uint8)
+	
+	# filtre l'image pour générer un masque
+	mask = cv2.inRange(hsv, lowerBound, upperBound)
+	
+	res = cv2.bitwise_and(img, img, mask=mask)
+	
+	# calcul les contours des objets
+	contours, hierarchy = cv2.findContours(mask, 1, 2)
+	
+	contours = [cnt for cnt in contours if cv2.contourArea(cnt) > MIN_AREA]
+	
+	count = 0
+	detected_objects_list = []
+	margin = 3
+	
+	# sélectionne les contours valides
+	good_contours = []
+	for i_cnt, cnt in enumerate(contours):
+		M = cv2.moments(cnt)
+		cx = int(M['m10']/M['m00'])
+		cy = int(M['m01']/M['m00'])
+		inside_of_other = False
+		for i_cnt_comp, cnt_comp in enumerate(contours):
+			if i_cnt == i_cnt_comp:
+				continue
+			if cv2.pointPolygonTest(cnt_comp, (cx, cy), False) >= 0:
+				inside_of_other = True
+				break
+		if not inside_of_other or cv2.contourArea(cnt) > cv2.contourArea(cnt_comp):
+			good_contours.append(cnt)
+	
+	contours = good_contours
+	
+	# traite chaque contour
+	for cnt in contours:
+		min_area_rect = cv2.minAreaRect(cnt)
+		
+		box = cv2.cv.BoxPoints(min_area_rect)
+		box = np.int0(box)
+		
+		unrot_x, unrot_y, unrot_w, unrot_h = cv2.boundingRect(np.array([box]))
+		
+		# on reste sur le rectangle pour faciliter l'extraction
+		if unrot_x <= margin or unrot_y <= margin or unrot_x + unrot_w >= resolution_x - margin or unrot_y + unrot_h >= resolution_y - margin:
+			continue
+		
+		count += 1
+		
+		cv2.drawContours(res, [box], 0, (0,255,0) ,2)
+		cv2.drawContours(res, [cnt], 0, (255,0,0), 2) #-1)
+		#cv2.drawContours(res, [approx], 0, (0,0,255), 2)
+		cv2.rectangle(res, (unrot_x, unrot_y), (unrot_x + unrot_w, unrot_y + unrot_h), (0,0,255), 2)
+
+		(rect_x, rect_y), (rect_w, rect_h), rect_angle = min_area_rect
+
+		if rect_angle < -45:
+			rect_angle += 90.0
+			rect_w, rect_h = rect_h, rect_w
+        
+		obj_mask = np.zeros((unrot_h, unrot_w), dtype=np.uint8)
+		obj_img = img[unrot_y:unrot_y+unrot_h, unrot_x:unrot_x+unrot_w]
+        
+		cv2.drawContours(obj_mask, [cnt], 0, 255, cv2.cv.CV_FILLED, offset=(-unrot_x, -unrot_y))
+		obj_contours, obj_hierarchy = cv2.findContours(obj_mask, 1, 2)
+		obj_img = cv2.bitwise_and(obj_img, obj_img, mask=obj_mask)
+		#cv2.drawContours(obj_img, obj_contours, 0, (255,0,0), 2)
+        
+		M = cv2.getRotationMatrix2D((unrot_w/2.0, unrot_h/2.0), rect_angle, 1.0)
+        
+		rotated = cv2.warpAffine(obj_img, M, (unrot_w, unrot_h), flags=cv2.INTER_LINEAR) #INTER_CUBIC
+		final = cv2.getRectSubPix(rotated, (max(int(rect_w), int(rect_h)), max(int(rect_w), int(rect_h))), (unrot_w/2.0, unrot_h/2.0))
+        
+		unrot_center_x = unrot_x + unrot_w/2
+		unrot_center_y = unrot_y + unrot_h/2
+
+		cv2.putText(res, str(count), (unrot_x, unrot_y - 5), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255))
+        
+		## TODO: mieux
+		if unrot_w > unrot_h:
+			rect_angle += 90.0
+			rect_w, rect_h, unrot_w, unrot_h = rect_h, rect_w, unrot_h, unrot_w
+			final = np.rot90(final, 1)
+		if np.mean(final[:rect_h/2]) > np.mean(final[rect_h/2:rect_h]):
+			final = np.rot90(final, 2)
+		OBJECTS_IMAGE_SIZE = 30
+		final = cv2.resize(final, (OBJECTS_IMAGE_SIZE, OBJECTS_IMAGE_SIZE))
+        
+		# HISTOGRAMS
+		if len(obj_contours) != 1:
+			print 'more than one contour!'
+		obj_cnt = obj_contours[0]
+        
+		epsilon2 = 0.005 * cv2.arcLength(obj_cnt, True)
+		obj_poly_approx = cv2.approxPolyDP(obj_cnt, epsilon2, True)
+        
+		if len(obj_poly_approx) < 3:
+			print 'polygon aproximation too simple!'
+			continue
+        
+		# ANGLES
+        
+		final = cv2.cvtColor(final, cv2.COLOR_BGR2RGB)
+		#final[:,:,1] = 1/(1+np.exp(0.05*(-final[:,:,1] + 255/2)))
+		object_img_hsv = cv2.cvtColor(final, cv2.COLOR_RGB2HSV)
+		colors_histo, histo_bins = np.histogram(object_img_hsv[:,:,0], bins=N_COLORS, range=(0, 179)) #, density=True) #, weights=(object_img_hsv[:,:,1] >= 0))
+		colors_histo[0] -= len(np.where(object_img_hsv[:,:,1] == 0)[0])
+		half_segment = N_COLORS/4
+		middle = colors_histo * np.array([0.0]*half_segment+[1.0]*2*half_segment+[0.0]*half_segment)
+		sigma = 2.0
+		middle = ndimage.filters.gaussian_filter1d(middle, sigma)
+		exterior = colors_histo * np.array([1.0]*half_segment+[0.0]*2*half_segment+[1.0]*half_segment)
+		exterior = np.append(exterior[2*half_segment:], exterior[0:2*half_segment])
+		exterior = ndimage.filters.gaussian_filter1d(exterior, sigma)
+		colors_histo = middle + np.append(exterior[2*half_segment:], exterior[0:2*half_segment])
+		colors_histo = colors_histo / float(np.sum(colors_histo))
+        
+		#object_shape = cv2.inRange(object_img_hsv, np.array([0, 0, 0]), np.array([255, 0, 0]))
+		#object_shape = cv2.Canny(final, 100, 200)
+		#cv2.imshow('edges' + str(count), object_shape)
+		object_shape = cv2.cvtColor(final, cv2.COLOR_BGR2GRAY)
+		object_shape = np.ndarray.flatten(object_shape)
+		sum = float(np.sum(object_shape))
+		if sum != 0:
+			print object_shape
+			object_shape = object_shape / float(np.sum(object_shape))
+			
+        
+		features = Vision_Features()
+		#features.angles_histogram = angles_histo
+		features.colors_histogram = colors_histo
+		features.shape_histogram = object_shape
+        
+		detected_object = Detected_Object()
+		detected_object.id = count
+		detected_object.center_x = unrot_center_x/float(resolution_x) # proportion de la largeur
+		detected_object.center_y = unrot_center_y/float(resolution_x) # proportion de la largeur aussi
+		detected_object.image = Image_tostring()
+		detected_object.image.data = final.tostring()
+		detected_object.image.width = OBJECTS_IMAGE_SIZE
+		detected_object.image.height = OBJECTS_IMAGE_SIZE
+		detected_object.features = features
+        
+		detected_objects_list.append(detected_object)
+        
+		#cv2.circle(obj_img, (unrot_w/2, unrot_h/2), 4, (255, 0, 255), -1)
+		#cv2.imshow('object ' + str(count) + ' obj_img', obj_img)
+		#cv2.imshow('object ' + str(count) + ' obj_mask', obj_mask)
+		#cv2.imshow('object ' + str(count) + ' rotated', rotated)
+		#cv2.imshow('object ' + str(count) + ' cropped', final)
+        
+		'''
+		cv2.circle(rotated, (w/2, int(H/2)), 4, (255, 0, 255), -1)
+		cv2.imshow('object ' + str(count) + ' rotated', rotated)
+        
+		cv2.imshow('object ' + str(count) + ' cropped', cropped)
+		'''
+		
+		
+		
+		#cv2.circle(res, (unrot_x + unrot_w/2, unrot_y + unrot_h/2), 4, (0, 0, 0), -1)
+	
+	
+	#print count, "polygons detected"
+	
+	detected_objects_list_msg = Detected_Objects_List()
+	detected_objects_list_msg.detected_objects_list = detected_objects_list
+	detected_objects_list_publisher.publish(detected_objects_list_msg)
+	
+	cv2.rectangle(res, (margin, margin), (resolution_x-margin, resolution_y-margin), (255, 255, 255))
+	
+	cv2.imshow('detected_object', res)
+	cv2.waitKey(1)
+
+if __name__ == '__main__' :
+	rospy.init_node('imageToObjects', anonymous=True)
+	
+	cv2.namedWindow(MAIN_WINDOW_NAME,cv2.WINDOW_NORMAL)
+	cv2.setMouseCallback(MAIN_WINDOW_NAME, callback_mouse)
+	cv2.createTrackbar(TRACKBAR_NB_PROFONDEUR_NAME, MAIN_WINDOW_NAME, 1, NB_IMG_PROFONDEUR_MAX, changeProfondeur)
+	cv2.createTrackbar(AFFICHAGE_COULEUR, MAIN_WINDOW_NAME, 0, 1, changeAffCouleur)
+	cv2.createTrackbar(AFFICHAGE_PROFONDEUR, MAIN_WINDOW_NAME, 0, 1, changeAffProfondeur)
+	
+	cv2.createTrackbar(CAPTURE_PROFONDEUR, MAIN_WINDOW_NAME, int(VAL_CAPTURE_PROFONDEUR*100), 10, changeCapture)
+	
+	# __TEST__
+	cv2.createTrackbar(DCOULEUR_TITRE, MAIN_WINDOW_NAME, DCOULEUR_VALUE, 255, changeDCOULEUR)
+	
+	cv2.imshow(MAIN_WINDOW_NAME,0)
+	
+	image_sub_rgb = rospy.Subscriber("/camera/rgb/image_raw", Image, callback_rgb)
+	image_sub_depth = rospy.Subscriber("/camera/depth_registered/image_raw", Image, callback_depth)
+	detected_objects_list_publisher = rospy.Publisher('detected_objects_list', Detected_Objects_List, queue_size=10)
+	
+	try :
+		rospy.spin()
+	except KeyboardInterrupt :
+		print "Shutting down"
+		cv2.destroyAllWindows()
+

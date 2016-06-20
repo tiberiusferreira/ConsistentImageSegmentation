@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+
+import rospy
+from experiment.msg import Words_Histogram
+import matplotlib.pyplot as plt
+import numpy as np
+from multimodal.online_learner import OnlineLearner
+
+LEXICON_FILE = '/home/fabio/experiment/library_NMF/lexicon'
+N_WORD_DISPLAY = 7
+N_TRAIN = 50
+K = 5
+
+OL = OnlineLearner(LEXICON_FILE, K, N_TRAIN)
+
+plt.ion()
+
+def plot_words_histogram(msg):
+    global words_histogram
+    words_histogram = np.array(msg.words_histogram)
+
+if __name__ == '__main__':
+    words_histogram = np.array([])
+    
+    plt.figure('words histo')
+
+    rospy.init_node('test_histograms_plotter', anonymous=True)
+    rospy.Subscriber('words_histograms_test', Words_Histogram, plot_words_histogram)
+    
+    while not rospy.is_shutdown():
+        words_histogram /= words_histogram.sum()
+        nb_words = len(words_histogram)
+        if nb_words >= len(OL._lexicon):
+            OL._reload_lexicon()
+        
+        rows = np.floor(np.sqrt(nb_words)) + 1
+    
+        plt.clf()
+        
+        for i, score in enumerate(words_histogram):
+            if score > 0.05:
+                w = OL._lexicon[i]
+                plt.text(1. * (i / rows) / rows, 1. * (i % rows) / rows, w, size=int(score * 100))
+        
+        plt.show()
+        plt.pause(0.5)

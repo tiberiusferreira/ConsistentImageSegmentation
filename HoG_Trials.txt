@@ -1,0 +1,539 @@
+neighbors = 11
+n_bin = 8
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 594
+Total = 960
+Percentage = 61
+Elapsed Time = 159.802462101
+
+
+neighbors = 11
+n_bin = 8
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 660
+Total = 960
+Percentage = 68
+Elapsed Time = 90.5813500881
+
+
+neighbors = 11
+n_bin = 8
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 650
+Total = 960
+Percentage = 67
+Elapsed Time = 65.7660808563
+
+
+neighbors = 11
+n_bin = 8
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 650
+Total = 960
+Percentage = 67
+Elapsed Time = 66.9420661926
+
+
+neighbors = 11
+n_bin = 7
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 641
+Total = 960
+Percentage = 66
+Elapsed Time = 121.751201153
+
+
+neighbors = 11
+n_bin = 7
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 645
+Total = 960
+Percentage = 67
+Elapsed Time = 75.6505990028
+
+
+neighbors = 11
+n_bin = 7
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 602
+Total = 960
+Percentage = 62
+Elapsed Time = 67.902451992
+
+
+neighbors = 11
+n_bin = 7
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 602
+Total = 960
+Percentage = 62
+Elapsed Time = 67.0203688145
+
+
+neighbors = 11
+n_bin = 6
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 658
+Total = 960
+Percentage = 68
+Elapsed Time = 93.805262804
+
+
+neighbors = 11
+n_bin = 6
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 665
+Total = 960
+Percentage = 69
+Elapsed Time = 65.7917041779
+
+
+neighbors = 11
+n_bin = 6
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 609
+Total = 960
+Percentage = 63
+Elapsed Time = 63.8195419312
+
+
+neighbors = 11
+n_bin = 6
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 609
+Total = 960
+Percentage = 63
+Elapsed Time = 62.7431399822
+
+
+neighbors = 11
+n_bin = 5
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 658
+Total = 960
+Percentage = 68
+Elapsed Time = 91.9563961029
+
+
+neighbors = 11
+n_bin = 5
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 608
+Total = 960
+Percentage = 63
+Elapsed Time = 61.6184639931
+
+
+neighbors = 11
+n_bin = 5
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 664
+Total = 960
+Percentage = 69
+Elapsed Time = 62.5447049141
+
+
+neighbors = 11
+n_bin = 5
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 664
+Total = 960
+Percentage = 69
+Elapsed Time = 61.6945438385
+
+
+neighbors = 11
+n_bin = 4
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 616
+Total = 960
+Percentage = 64
+Elapsed Time = 78.1667380333
+
+
+neighbors = 11
+n_bin = 4
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 636
+Total = 960
+Percentage = 66
+Elapsed Time = 54.7761588097
+
+
+neighbors = 11
+n_bin = 4
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 659
+Total = 960
+Percentage = 68
+Elapsed Time = 61.8644981384
+
+
+neighbors = 11
+n_bin = 4
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 671
+Total = 960
+Percentage = 69
+Elapsed Time = 68.6473379135
+
+
+neighbors = 11
+n_bin = 3
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 539
+Total = 960
+Percentage = 56
+Elapsed Time = 91.7919938564
+
+
+neighbors = 11
+n_bin = 3
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 562
+Total = 960
+Percentage = 58
+Elapsed Time = 50.1631820202
+
+
+neighbors = 11
+n_bin = 3
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 649
+Total = 960
+Percentage = 67
+Elapsed Time = 66.7861120701
+
+
+neighbors = 11
+n_bin = 3
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 649
+Total = 960
+Percentage = 67
+Elapsed Time = 63.9776530266
+
+
+neighbors = 10
+n_bin = 8
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 604
+Total = 960
+Percentage = 62
+Elapsed Time = 125.702297926
+
+
+neighbors = 10
+n_bin = 8
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 664
+Total = 960
+Percentage = 69
+Elapsed Time = 77.9986259937
+
+
+neighbors = 10
+n_bin = 8
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 658
+Total = 960
+Percentage = 68
+Elapsed Time = 66.3083479404
+
+
+neighbors = 10
+n_bin = 8
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 658
+Total = 960
+Percentage = 68
+Elapsed Time = 70.5016360283
+
+
+neighbors = 10
+n_bin = 7
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 644
+Total = 960
+Percentage = 67
+Elapsed Time = 116.758690119
+
+
+neighbors = 10
+n_bin = 7
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 657
+Total = 960
+Percentage = 68
+Elapsed Time = 75.0813770294
+
+
+neighbors = 10
+n_bin = 7
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 621
+Total = 960
+Percentage = 64
+Elapsed Time = 66.8615119457
+
+
+neighbors = 10
+n_bin = 7
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 621
+Total = 960
+Percentage = 64
+Elapsed Time = 67.2154638767
+
+
+neighbors = 10
+n_bin = 6
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 660
+Total = 960
+Percentage = 68
+Elapsed Time = 103.592040777
+
+
+neighbors = 10
+n_bin = 6
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 674
+Total = 960
+Percentage = 70
+Elapsed Time = 71.7239029408
+
+
+neighbors = 10
+n_bin = 6
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 624
+Total = 960
+Percentage = 65
+Elapsed Time = 65.0060451031
+
+
+neighbors = 10
+n_bin = 6
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 624
+Total = 960
+Percentage = 65
+Elapsed Time = 75.2725679874
+
+
+neighbors = 10
+n_bin = 5
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 675
+Total = 960
+Percentage = 70
+Elapsed Time = 98.6855890751
+
+
+neighbors = 10
+n_bin = 5
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 613
+Total = 960
+Percentage = 63
+Elapsed Time = 59.6178941727
+
+
+neighbors = 10
+n_bin = 5
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 668
+Total = 960
+Percentage = 69
+Elapsed Time = 60.9864981174
+
+
+neighbors = 10
+n_bin = 5
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 668
+Total = 960
+Percentage = 69
+Elapsed Time = 63.351954937
+
+
+neighbors = 10
+n_bin = 4
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 623
+Total = 960
+Percentage = 64
+Elapsed Time = 87.8253550529
+
+
+neighbors = 10
+n_bin = 4
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 638
+Total = 960
+Percentage = 66
+Elapsed Time = 57.9085640907
+
+
+neighbors = 10
+n_bin = 4
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 677
+Total = 960
+Percentage = 70
+Elapsed Time = 66.208728075
+
+
+neighbors = 10
+n_bin = 4
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 668
+Total = 960
+Percentage = 69
+Elapsed Time = 62.3584420681
+
+
+neighbors = 10
+n_bin = 3
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 547
+Total = 960
+Percentage = 56
+Elapsed Time = 72.7204549313
+
+
+neighbors = 10
+n_bin = 3
+b_size = 64
+b_stride = 64
+c_size = 32
+Failure = 582
+Total = 960
+Percentage = 60
+Elapsed Time = 48.0200707912
+
+
+neighbors = 10
+n_bin = 3
+b_size = 128
+b_stride = 64
+c_size = 64
+Failure = 655
+Total = 960
+Percentage = 68
+Elapsed Time = 58.9774870872
+
+
+neighbors = 10
+n_bin = 3
+b_size = 128
+b_stride = 128
+c_size = 64
+Failure = 655
+Total = 960
+Percentage = 68
+Elapsed Time = 58.7761321068
+
+
+neighbors = 9
+n_bin = 8
+b_size = 64
+b_stride = 32
+c_size = 32
+Failure = 625
+Total = 960
+Percentage = 65
+Elapsed Time = 120.04618597
+
+

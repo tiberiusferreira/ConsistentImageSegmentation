@@ -1,0 +1,2034 @@
+n_bin = 2
+b_size = 30
+c_size = 30
+Failure = 445
+Total = 818
+Percentage = 54
+Elapsed Time = 68.0162580013
+
+
+n_bin = 2
+b_size = 29
+c_size = 29
+Failure = 331
+Total = 818
+Percentage = 40
+Elapsed Time = 56.799271822
+
+
+n_bin = 2
+b_size = 30
+c_size = 30
+Failure = 460
+Total = 960
+Percentage = 47
+Elapsed Time = 68.6838970184
+
+
+n_bin = 2
+b_size = 29
+c_size = 29
+Failure = 411
+Total = 960
+Percentage = 42
+Elapsed Time = 66.9657459259
+
+
+n_bin = 2
+b_size = 28
+c_size = 28
+Failure = 288
+Total = 960
+Percentage = 30
+Elapsed Time = 70.6915280819
+
+
+n_bin = 2
+b_size = 27
+c_size = 27
+Failure = 234
+Total = 960
+Percentage = 24
+Elapsed Time = 69.2290890217
+
+
+n_bin = 2
+b_size = 26
+c_size = 26
+Failure = 240
+Total = 960
+Percentage = 25
+Elapsed Time = 67.7583680153
+
+
+n_bin = 2
+b_size = 25
+c_size = 25
+Failure = 253
+Total = 960
+Percentage = 26
+Elapsed Time = 67.4245579243
+
+
+n_bin = 2
+b_size = 24
+c_size = 24
+Failure = 271
+Total = 960
+Percentage = 28
+Elapsed Time = 72.2060739994
+
+
+n_bin = 2
+b_size = 23
+c_size = 23
+Failure = 177
+Total = 960
+Percentage = 18
+Elapsed Time = 74.8555591106
+
+
+n_bin = 2
+b_size = 22
+c_size = 22
+Failure = 218
+Total = 960
+Percentage = 22
+Elapsed Time = 72.0915298462
+
+
+n_bin = 2
+b_size = 21
+c_size = 21
+Failure = 218
+Total = 960
+Percentage = 22
+Elapsed Time = 71.5594780445
+
+
+n_bin = 2
+b_size = 20
+c_size = 20
+Failure = 211
+Total = 960
+Percentage = 21
+Elapsed Time = 78.5171709061
+
+
+n_bin = 2
+b_size = 19
+c_size = 19
+Failure = 180
+Total = 960
+Percentage = 18
+Elapsed Time = 82.6771600246
+
+
+n_bin = 2
+b_size = 18
+c_size = 18
+Failure = 173
+Total = 960
+Percentage = 18
+Elapsed Time = 79.5371379852
+
+
+n_bin = 2
+b_size = 17
+c_size = 17
+Failure = 144
+Total = 960
+Percentage = 15
+Elapsed Time = 86.3826088905
+
+
+n_bin = 2
+b_size = 16
+c_size = 16
+Failure = 117
+Total = 960
+Percentage = 12
+Elapsed Time = 88.5379319191
+
+
+n_bin = 2
+b_size = 15
+c_size = 15
+Failure = 125
+Total = 960
+Percentage = 13
+Elapsed Time = 95.7130541801
+
+
+n_bin = 2
+b_size = 14
+c_size = 14
+Failure = 121
+Total = 960
+Percentage = 12
+Elapsed Time = 101.162173033
+
+
+n_bin = 2
+b_size = 13
+c_size = 13
+Failure = 149
+Total = 960
+Percentage = 15
+Elapsed Time = 108.26311183
+
+
+n_bin = 2
+b_size = 12
+c_size = 12
+Failure = 154
+Total = 960
+Percentage = 16
+Elapsed Time = 122.320697069
+
+
+n_bin = 2
+b_size = 11
+c_size = 11
+Failure = 136
+Total = 960
+Percentage = 14
+Elapsed Time = 128.951081991
+
+
+n_bin = 2
+b_size = 10
+c_size = 10
+Failure = 128
+Total = 960
+Percentage = 13
+Elapsed Time = 158.437129021
+
+
+n_bin = 2
+b_size = 9
+c_size = 9
+Failure = 152
+Total = 960
+Percentage = 15
+Elapsed Time = 177.746492147
+
+
+n_bin = 2
+b_size = 8
+c_size = 8
+Failure = 138
+Total = 960
+Percentage = 14
+Elapsed Time = 229.640853167
+
+
+n_bin = 2
+b_size = 7
+c_size = 7
+Failure = 137
+Total = 960
+Percentage = 14
+Elapsed Time = 287.130251169
+
+
+n_bin = 2
+b_size = 6
+c_size = 6
+Failure = 147
+Total = 960
+Percentage = 15
+Elapsed Time = 404.035996914
+
+
+n_bin = 2
+b_size = 5
+c_size = 5
+Failure = 146
+Total = 960
+Percentage = 15
+Elapsed Time = 584.684849024
+
+
+n_bin = 3
+b_size = 30
+c_size = 30
+Failure = 183
+Total = 960
+Percentage = 19
+Elapsed Time = 81.1982901096
+
+
+n_bin = 3
+b_size = 29
+c_size = 29
+Failure = 176
+Total = 960
+Percentage = 18
+Elapsed Time = 80.2518370152
+
+
+n_bin = 3
+b_size = 28
+c_size = 28
+Failure = 164
+Total = 960
+Percentage = 17
+Elapsed Time = 84.8190221786
+
+
+n_bin = 3
+b_size = 27
+c_size = 27
+Failure = 146
+Total = 960
+Percentage = 15
+Elapsed Time = 82.8820040226
+
+
+n_bin = 3
+b_size = 26
+c_size = 26
+Failure = 168
+Total = 960
+Percentage = 17
+Elapsed Time = 82.3264188766
+
+
+n_bin = 3
+b_size = 25
+c_size = 25
+Failure = 127
+Total = 960
+Percentage = 13
+Elapsed Time = 81.111438036
+
+
+n_bin = 3
+b_size = 24
+c_size = 24
+Failure = 111
+Total = 960
+Percentage = 11
+Elapsed Time = 87.4877297878
+
+
+n_bin = 3
+b_size = 23
+c_size = 23
+Failure = 56
+Total = 960
+Percentage = 5
+Elapsed Time = 93.9648349285
+
+
+n_bin = 3
+b_size = 22
+c_size = 22
+Failure = 53
+Total = 960
+Percentage = 5
+Elapsed Time = 89.0602388382
+
+
+n_bin = 3
+b_size = 21
+c_size = 21
+Failure = 72
+Total = 960
+Percentage = 7
+Elapsed Time = 87.0415709019
+
+
+n_bin = 3
+b_size = 20
+c_size = 20
+Failure = 69
+Total = 960
+Percentage = 7
+Elapsed Time = 93.1727621555
+
+
+n_bin = 3
+b_size = 19
+c_size = 19
+Failure = 38
+Total = 960
+Percentage = 3
+Elapsed Time = 99.32366395
+
+
+n_bin = 3
+b_size = 18
+c_size = 18
+Failure = 64
+Total = 960
+Percentage = 6
+Elapsed Time = 97.4318649769
+
+
+n_bin = 3
+b_size = 17
+c_size = 17
+Failure = 57
+Total = 960
+Percentage = 5
+Elapsed Time = 105.638592958
+
+
+n_bin = 3
+b_size = 16
+c_size = 16
+Failure = 56
+Total = 960
+Percentage = 5
+Elapsed Time = 109.529743195
+
+
+n_bin = 3
+b_size = 15
+c_size = 15
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 119.452193022
+
+
+n_bin = 3
+b_size = 14
+c_size = 14
+Failure = 51
+Total = 960
+Percentage = 5
+Elapsed Time = 125.901200056
+
+
+n_bin = 3
+b_size = 13
+c_size = 13
+Failure = 85
+Total = 960
+Percentage = 8
+Elapsed Time = 133.342809916
+
+
+n_bin = 3
+b_size = 12
+c_size = 12
+Failure = 49
+Total = 960
+Percentage = 5
+Elapsed Time = 154.373136044
+
+
+n_bin = 3
+b_size = 11
+c_size = 11
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 166.823401928
+
+
+n_bin = 3
+b_size = 10
+c_size = 10
+Failure = 35
+Total = 960
+Percentage = 3
+Elapsed Time = 242.174222946
+
+
+n_bin = 3
+b_size = 9
+c_size = 9
+Failure = 43
+Total = 960
+Percentage = 4
+Elapsed Time = 266.714828968
+
+
+n_bin = 3
+b_size = 8
+c_size = 8
+Failure = 76
+Total = 960
+Percentage = 7
+Elapsed Time = 355.106714964
+
+
+n_bin = 3
+b_size = 7
+c_size = 7
+Failure = 75
+Total = 960
+Percentage = 7
+Elapsed Time = 532.154803038
+
+
+n_bin = 3
+b_size = 6
+c_size = 6
+Failure = 89
+Total = 960
+Percentage = 9
+Elapsed Time = 623.744547844
+
+
+n_bin = 3
+b_size = 5
+c_size = 5
+Failure = 82
+Total = 960
+Percentage = 8
+Elapsed Time = 789.52245307
+
+
+n_bin = 4
+b_size = 30
+c_size = 30
+Failure = 200
+Total = 960
+Percentage = 20
+Elapsed Time = 108.899888039
+
+
+n_bin = 4
+b_size = 29
+c_size = 29
+Failure = 209
+Total = 960
+Percentage = 21
+Elapsed Time = 118.911629915
+
+
+n_bin = 4
+b_size = 28
+c_size = 28
+Failure = 122
+Total = 960
+Percentage = 12
+Elapsed Time = 127.235693216
+
+
+n_bin = 4
+b_size = 27
+c_size = 27
+Failure = 104
+Total = 960
+Percentage = 10
+Elapsed Time = 116.043830872
+
+
+n_bin = 4
+b_size = 26
+c_size = 26
+Failure = 63
+Total = 960
+Percentage = 6
+Elapsed Time = 104.454974174
+
+
+n_bin = 4
+b_size = 25
+c_size = 25
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 104.623099804
+
+
+n_bin = 4
+b_size = 24
+c_size = 24
+Failure = 31
+Total = 960
+Percentage = 3
+Elapsed Time = 114.862530947
+
+
+n_bin = 4
+b_size = 23
+c_size = 23
+Failure = 23
+Total = 960
+Percentage = 2
+Elapsed Time = 120.738313913
+
+
+n_bin = 4
+b_size = 22
+c_size = 22
+Failure = 42
+Total = 960
+Percentage = 4
+Elapsed Time = 118.582885981
+
+
+n_bin = 4
+b_size = 21
+c_size = 21
+Failure = 51
+Total = 960
+Percentage = 5
+Elapsed Time = 115.594964027
+
+
+n_bin = 4
+b_size = 20
+c_size = 20
+Failure = 32
+Total = 960
+Percentage = 3
+Elapsed Time = 122.475427866
+
+
+n_bin = 4
+b_size = 19
+c_size = 19
+Failure = 24
+Total = 960
+Percentage = 2
+Elapsed Time = 148.004491091
+
+
+n_bin = 4
+b_size = 18
+c_size = 18
+Failure = 49
+Total = 960
+Percentage = 5
+Elapsed Time = 130.948901176
+
+
+n_bin = 4
+b_size = 17
+c_size = 17
+Failure = 56
+Total = 960
+Percentage = 5
+Elapsed Time = 138.431560993
+
+
+n_bin = 4
+b_size = 16
+c_size = 16
+Failure = 24
+Total = 960
+Percentage = 2
+Elapsed Time = 143.837668896
+
+
+n_bin = 4
+b_size = 15
+c_size = 15
+Failure = 15
+Total = 960
+Percentage = 1
+Elapsed Time = 154.083769083
+
+
+n_bin = 4
+b_size = 14
+c_size = 14
+Failure = 29
+Total = 960
+Percentage = 3
+Elapsed Time = 164.387724161
+
+
+n_bin = 4
+b_size = 13
+c_size = 13
+Failure = 57
+Total = 960
+Percentage = 5
+Elapsed Time = 180.550013065
+
+
+n_bin = 4
+b_size = 12
+c_size = 12
+Failure = 50
+Total = 960
+Percentage = 5
+Elapsed Time = 257.406581879
+
+
+n_bin = 4
+b_size = 11
+c_size = 11
+Failure = 43
+Total = 960
+Percentage = 4
+Elapsed Time = 281.813421965
+
+
+n_bin = 4
+b_size = 10
+c_size = 10
+Failure = 33
+Total = 960
+Percentage = 3
+Elapsed Time = 357.71077919
+
+
+n_bin = 4
+b_size = 9
+c_size = 9
+Failure = 62
+Total = 960
+Percentage = 6
+Elapsed Time = 422.879673004
+
+
+n_bin = 4
+b_size = 8
+c_size = 8
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 496.676850796
+
+
+n_bin = 4
+b_size = 7
+c_size = 7
+Failure = 55
+Total = 960
+Percentage = 5
+Elapsed Time = 566.402559996
+
+
+n_bin = 4
+b_size = 6
+c_size = 6
+Failure = 60
+Total = 960
+Percentage = 6
+Elapsed Time = 997.871861935
+
+
+n_bin = 4
+b_size = 5
+c_size = 5
+Failure = 68
+Total = 960
+Percentage = 7
+Elapsed Time = 1172.85428214
+
+
+n_bin = 5
+b_size = 30
+c_size = 30
+Failure = 144
+Total = 960
+Percentage = 15
+Elapsed Time = 154.295836926
+
+
+n_bin = 5
+b_size = 29
+c_size = 29
+Failure = 158
+Total = 960
+Percentage = 16
+Elapsed Time = 143.343408108
+
+
+n_bin = 5
+b_size = 28
+c_size = 28
+Failure = 146
+Total = 960
+Percentage = 15
+Elapsed Time = 138.514667034
+
+
+n_bin = 5
+b_size = 27
+c_size = 27
+Failure = 141
+Total = 960
+Percentage = 14
+Elapsed Time = 133.734969854
+
+
+n_bin = 5
+b_size = 26
+c_size = 26
+Failure = 141
+Total = 960
+Percentage = 14
+Elapsed Time = 136.937890053
+
+
+n_bin = 5
+b_size = 25
+c_size = 25
+Failure = 87
+Total = 960
+Percentage = 9
+Elapsed Time = 137.064326048
+
+
+n_bin = 5
+b_size = 24
+c_size = 24
+Failure = 78
+Total = 960
+Percentage = 8
+Elapsed Time = 176.267080069
+
+
+n_bin = 5
+b_size = 23
+c_size = 23
+Failure = 17
+Total = 960
+Percentage = 1
+Elapsed Time = 180.716899872
+
+
+n_bin = 5
+b_size = 22
+c_size = 22
+Failure = 50
+Total = 960
+Percentage = 5
+Elapsed Time = 153.764698982
+
+
+n_bin = 5
+b_size = 21
+c_size = 21
+Failure = 78
+Total = 960
+Percentage = 8
+Elapsed Time = 138.808306932
+
+
+n_bin = 5
+b_size = 20
+c_size = 20
+Failure = 94
+Total = 960
+Percentage = 9
+Elapsed Time = 149.694800854
+
+
+n_bin = 5
+b_size = 19
+c_size = 19
+Failure = 38
+Total = 960
+Percentage = 3
+Elapsed Time = 162.827026844
+
+
+n_bin = 5
+b_size = 18
+c_size = 18
+Failure = 67
+Total = 960
+Percentage = 6
+Elapsed Time = 156.659780025
+
+
+n_bin = 5
+b_size = 17
+c_size = 17
+Failure = 66
+Total = 960
+Percentage = 6
+Elapsed Time = 169.852113008
+
+
+n_bin = 5
+b_size = 16
+c_size = 16
+Failure = 65
+Total = 960
+Percentage = 6
+Elapsed Time = 176.255508184
+
+
+n_bin = 5
+b_size = 15
+c_size = 15
+Failure = 40
+Total = 960
+Percentage = 4
+Elapsed Time = 192.853867769
+
+
+n_bin = 5
+b_size = 14
+c_size = 14
+Failure = 61
+Total = 960
+Percentage = 6
+Elapsed Time = 216.6765728
+
+
+n_bin = 5
+b_size = 13
+c_size = 13
+Failure = 72
+Total = 960
+Percentage = 7
+Elapsed Time = 243.544644117
+
+
+n_bin = 5
+b_size = 12
+c_size = 12
+Failure = 55
+Total = 960
+Percentage = 5
+Elapsed Time = 274.156836033
+
+
+n_bin = 5
+b_size = 11
+c_size = 11
+Failure = 52
+Total = 960
+Percentage = 5
+Elapsed Time = 287.79893589
+
+
+n_bin = 5
+b_size = 10
+c_size = 10
+Failure = 45
+Total = 960
+Percentage = 4
+Elapsed Time = 370.026768923
+
+
+n_bin = 5
+b_size = 9
+c_size = 9
+Failure = 72
+Total = 960
+Percentage = 7
+Elapsed Time = 401.664182186
+
+
+n_bin = 5
+b_size = 8
+c_size = 8
+Failure = 70
+Total = 960
+Percentage = 7
+Elapsed Time = 537.330141068
+
+
+n_bin = 5
+b_size = 7
+c_size = 7
+Failure = 86
+Total = 960
+Percentage = 8
+Elapsed Time = 674.523924112
+
+
+n_bin = 5
+b_size = 6
+c_size = 6
+Failure = 95
+Total = 960
+Percentage = 9
+Elapsed Time = 904.766247988
+
+
+n_bin = 5
+b_size = 5
+c_size = 5
+Failure = 100
+Total = 960
+Percentage = 10
+Elapsed Time = 1347.13028812
+
+
+n_bin = 6
+b_size = 30
+c_size = 30
+Failure = 141
+Total = 960
+Percentage = 14
+Elapsed Time = 151.412134886
+
+
+n_bin = 6
+b_size = 29
+c_size = 29
+Failure = 155
+Total = 960
+Percentage = 16
+Elapsed Time = 149.995410919
+
+
+n_bin = 6
+b_size = 28
+c_size = 28
+Failure = 108
+Total = 960
+Percentage = 11
+Elapsed Time = 160.126079798
+
+
+n_bin = 6
+b_size = 27
+c_size = 27
+Failure = 96
+Total = 960
+Percentage = 10
+Elapsed Time = 155.154105902
+
+
+n_bin = 6
+b_size = 26
+c_size = 26
+Failure = 71
+Total = 960
+Percentage = 7
+Elapsed Time = 151.095591068
+
+
+n_bin = 6
+b_size = 25
+c_size = 25
+Failure = 67
+Total = 960
+Percentage = 6
+Elapsed Time = 145.598536015
+
+
+n_bin = 6
+b_size = 24
+c_size = 24
+Failure = 36
+Total = 960
+Percentage = 3
+Elapsed Time = 160.056387901
+
+
+n_bin = 6
+b_size = 23
+c_size = 23
+Failure = 19
+Total = 960
+Percentage = 1
+Elapsed Time = 173.966186047
+
+
+n_bin = 6
+b_size = 22
+c_size = 22
+Failure = 38
+Total = 960
+Percentage = 3
+Elapsed Time = 164.981487036
+
+
+n_bin = 6
+b_size = 21
+c_size = 21
+Failure = 35
+Total = 960
+Percentage = 3
+Elapsed Time = 160.902202845
+
+
+n_bin = 6
+b_size = 20
+c_size = 20
+Failure = 37
+Total = 960
+Percentage = 3
+Elapsed Time = 178.272265911
+
+
+n_bin = 6
+b_size = 19
+c_size = 19
+Failure = 31
+Total = 960
+Percentage = 3
+Elapsed Time = 195.259099007
+
+
+n_bin = 6
+b_size = 18
+c_size = 18
+Failure = 49
+Total = 960
+Percentage = 5
+Elapsed Time = 184.729629993
+
+
+n_bin = 6
+b_size = 17
+c_size = 17
+Failure = 33
+Total = 960
+Percentage = 3
+Elapsed Time = 204.939892054
+
+
+n_bin = 6
+b_size = 16
+c_size = 16
+Failure = 25
+Total = 960
+Percentage = 2
+Elapsed Time = 214.659935951
+
+
+n_bin = 6
+b_size = 15
+c_size = 15
+Failure = 12
+Total = 960
+Percentage = 1
+Elapsed Time = 231.093592882
+
+
+n_bin = 6
+b_size = 14
+c_size = 14
+Failure = 33
+Total = 960
+Percentage = 3
+Elapsed Time = 249.888947964
+
+
+n_bin = 6
+b_size = 13
+c_size = 13
+Failure = 70
+Total = 960
+Percentage = 7
+Elapsed Time = 268.319689035
+
+
+n_bin = 6
+b_size = 12
+c_size = 12
+Failure = 41
+Total = 960
+Percentage = 4
+Elapsed Time = 318.079810143
+
+
+n_bin = 6
+b_size = 11
+c_size = 11
+Failure = 40
+Total = 960
+Percentage = 4
+Elapsed Time = 336.012789965
+
+
+n_bin = 6
+b_size = 10
+c_size = 10
+Failure = 32
+Total = 960
+Percentage = 3
+Elapsed Time = 433.392240047
+
+
+n_bin = 6
+b_size = 9
+c_size = 9
+Failure = 58
+Total = 960
+Percentage = 6
+Elapsed Time = 491.429905891
+
+
+n_bin = 6
+b_size = 8
+c_size = 8
+Failure = 43
+Total = 960
+Percentage = 4
+Elapsed Time = 674.928556204
+
+
+n_bin = 6
+b_size = 7
+c_size = 7
+Failure = 46
+Total = 960
+Percentage = 4
+Elapsed Time = 891.057660103
+
+
+n_bin = 6
+b_size = 6
+c_size = 6
+Failure = 51
+Total = 960
+Percentage = 5
+Elapsed Time = 1249.80081987
+
+
+n_bin = 6
+b_size = 5
+c_size = 5
+Failure = 66
+Total = 960
+Percentage = 6
+Elapsed Time = 1757.40223598
+
+
+n_bin = 7
+b_size = 30
+c_size = 30
+Failure = 163
+Total = 960
+Percentage = 16
+Elapsed Time = 168.445567131
+
+
+n_bin = 7
+b_size = 29
+c_size = 29
+Failure = 190
+Total = 960
+Percentage = 19
+Elapsed Time = 165.571376085
+
+
+n_bin = 7
+b_size = 28
+c_size = 28
+Failure = 143
+Total = 960
+Percentage = 14
+Elapsed Time = 181.468364954
+
+
+n_bin = 7
+b_size = 27
+c_size = 27
+Failure = 136
+Total = 960
+Percentage = 14
+Elapsed Time = 174.814787865
+
+
+n_bin = 7
+b_size = 26
+c_size = 26
+Failure = 133
+Total = 960
+Percentage = 13
+Elapsed Time = 172.876605988
+
+
+n_bin = 7
+b_size = 25
+c_size = 25
+Failure = 106
+Total = 960
+Percentage = 11
+Elapsed Time = 171.740916967
+
+
+n_bin = 7
+b_size = 24
+c_size = 24
+Failure = 91
+Total = 960
+Percentage = 9
+Elapsed Time = 189.463511944
+
+
+n_bin = 7
+b_size = 23
+c_size = 23
+Failure = 35
+Total = 960
+Percentage = 3
+Elapsed Time = 208.200609922
+
+
+n_bin = 7
+b_size = 22
+c_size = 22
+Failure = 62
+Total = 960
+Percentage = 6
+Elapsed Time = 196.375634909
+
+
+n_bin = 7
+b_size = 21
+c_size = 21
+Failure = 86
+Total = 960
+Percentage = 8
+Elapsed Time = 192.624036074
+
+
+n_bin = 7
+b_size = 20
+c_size = 20
+Failure = 83
+Total = 960
+Percentage = 8
+Elapsed Time = 212.624576092
+
+
+n_bin = 7
+b_size = 19
+c_size = 19
+Failure = 62
+Total = 960
+Percentage = 6
+Elapsed Time = 232.550978899
+
+
+n_bin = 7
+b_size = 18
+c_size = 18
+Failure = 76
+Total = 960
+Percentage = 7
+Elapsed Time = 221.788107872
+
+
+n_bin = 7
+b_size = 17
+c_size = 17
+Failure = 68
+Total = 960
+Percentage = 7
+Elapsed Time = 246.551260948
+
+
+n_bin = 7
+b_size = 16
+c_size = 16
+Failure = 79
+Total = 960
+Percentage = 8
+Elapsed Time = 256.592199087
+
+
+n_bin = 7
+b_size = 15
+c_size = 15
+Failure = 50
+Total = 960
+Percentage = 5
+Elapsed Time = 279.174645185
+
+
+n_bin = 7
+b_size = 14
+c_size = 14
+Failure = 72
+Total = 960
+Percentage = 7
+Elapsed Time = 303.799285889
+
+
+n_bin = 7
+b_size = 13
+c_size = 13
+Failure = 80
+Total = 960
+Percentage = 8
+Elapsed Time = 325.29858613
+
+
+n_bin = 7
+b_size = 12
+c_size = 12
+Failure = 65
+Total = 960
+Percentage = 6
+Elapsed Time = 388.610934019
+
+
+n_bin = 7
+b_size = 11
+c_size = 11
+Failure = 67
+Total = 960
+Percentage = 6
+Elapsed Time = 415.576194048
+
+
+n_bin = 7
+b_size = 10
+c_size = 10
+Failure = 70
+Total = 960
+Percentage = 7
+Elapsed Time = 541.90746212
+
+
+n_bin = 7
+b_size = 9
+c_size = 9
+Failure = 83
+Total = 960
+Percentage = 8
+Elapsed Time = 613.57489109
+
+
+n_bin = 7
+b_size = 8
+c_size = 8
+Failure = 81
+Total = 960
+Percentage = 8
+Elapsed Time = 804.040884972
+
+
+n_bin = 7
+b_size = 7
+c_size = 7
+Failure = 109
+Total = 960
+Percentage = 11
+Elapsed Time = 1031.58562016
+
+
+n_bin = 7
+b_size = 6
+c_size = 6
+Failure = 100
+Total = 960
+Percentage = 10
+Elapsed Time = 1457.31673288
+
+
+n_bin = 7
+b_size = 5
+c_size = 5
+Failure = 120
+Total = 960
+Percentage = 12
+Elapsed Time = 2142.18774915
+
+
+n_bin = 8
+b_size = 30
+c_size = 30
+Failure = 177
+Total = 960
+Percentage = 18
+Elapsed Time = 197.549525023
+
+
+n_bin = 8
+b_size = 29
+c_size = 29
+Failure = 205
+Total = 960
+Percentage = 21
+Elapsed Time = 194.907486916
+
+
+n_bin = 8
+b_size = 28
+c_size = 28
+Failure = 129
+Total = 960
+Percentage = 13
+Elapsed Time = 218.248806953
+
+
+n_bin = 8
+b_size = 27
+c_size = 27
+Failure = 113
+Total = 960
+Percentage = 11
+Elapsed Time = 207.53460288
+
+
+n_bin = 8
+b_size = 26
+c_size = 26
+Failure = 88
+Total = 960
+Percentage = 9
+Elapsed Time = 203.822408915
+
+
+n_bin = 8
+b_size = 25
+c_size = 25
+Failure = 73
+Total = 960
+Percentage = 7
+Elapsed Time = 201.572515011
+
+
+n_bin = 8
+b_size = 24
+c_size = 24
+Failure = 42
+Total = 960
+Percentage = 4
+Elapsed Time = 223.735612869
+
+
+n_bin = 8
+b_size = 23
+c_size = 23
+Failure = 29
+Total = 960
+Percentage = 3
+Elapsed Time = 249.604192019
+
+
+n_bin = 8
+b_size = 22
+c_size = 22
+Failure = 42
+Total = 960
+Percentage = 4
+Elapsed Time = 233.454935074
+
+
+n_bin = 8
+b_size = 21
+c_size = 21
+Failure = 31
+Total = 960
+Percentage = 3
+Elapsed Time = 227.547464132
+
+
+n_bin = 8
+b_size = 20
+c_size = 20
+Failure = 42
+Total = 960
+Percentage = 4
+Elapsed Time = 254.734937906
+
+
+n_bin = 8
+b_size = 19
+c_size = 19
+Failure = 36
+Total = 960
+Percentage = 3
+Elapsed Time = 282.153933048
+
+
+n_bin = 8
+b_size = 18
+c_size = 18
+Failure = 54
+Total = 960
+Percentage = 5
+Elapsed Time = 267.97143507
+
+
+n_bin = 8
+b_size = 17
+c_size = 17
+Failure = 42
+Total = 960
+Percentage = 4
+Elapsed Time = 297.677273035
+
+
+n_bin = 8
+b_size = 16
+c_size = 16
+Failure = 33
+Total = 960
+Percentage = 3
+Elapsed Time = 311.788799047
+
+
+n_bin = 8
+b_size = 15
+c_size = 15
+Failure = 22
+Total = 960
+Percentage = 2
+Elapsed Time = 346.030597925
+
+
+n_bin = 8
+b_size = 14
+c_size = 14
+Failure = 35
+Total = 960
+Percentage = 3
+Elapsed Time = 373.921760082
+
+
+n_bin = 8
+b_size = 13
+c_size = 13
+Failure = 59
+Total = 960
+Percentage = 6
+Elapsed Time = 403.333178043
+
+
+n_bin = 8
+b_size = 12
+c_size = 12
+Failure = 46
+Total = 960
+Percentage = 4
+Elapsed Time = 482.706529856
+
+
+n_bin = 8
+b_size = 11
+c_size = 11
+Failure = 46
+Total = 960
+Percentage = 4
+Elapsed Time = 517.194880009
+
+
+n_bin = 8
+b_size = 10
+c_size = 10
+Failure = 39
+Total = 960
+Percentage = 4
+Elapsed Time = 679.256757975
+
+
+n_bin = 8
+b_size = 9
+c_size = 9
+Failure = 61
+Total = 960
+Percentage = 6
+Elapsed Time = 769.779601097
+
+
+n_bin = 8
+b_size = 8
+c_size = 8
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 1021.59379315
+
+
+n_bin = 8
+b_size = 7
+c_size = 7
+Failure = 51
+Total = 960
+Percentage = 5
+Elapsed Time = 1329.38986397
+
+
+n_bin = 8
+b_size = 6
+c_size = 6
+Failure = 69
+Total = 960
+Percentage = 7
+Elapsed Time = 1836.03533888
+
+
+n_bin = 8
+b_size = 5
+c_size = 5
+Failure = 71
+Total = 960
+Percentage = 7
+Elapsed Time = 2752.3668921
+
+
+n_bin = 9
+b_size = 30
+c_size = 30
+Failure = 200
+Total = 960
+Percentage = 20
+Elapsed Time = 224.634856939
+
+
+n_bin = 9
+b_size = 29
+c_size = 29
+Failure = 223
+Total = 960
+Percentage = 23
+Elapsed Time = 220.783138037
+
+
+n_bin = 9
+b_size = 28
+c_size = 28
+Failure = 178
+Total = 960
+Percentage = 18
+Elapsed Time = 242.433176994
+
+
+n_bin = 9
+b_size = 27
+c_size = 27
+Failure = 189
+Total = 960
+Percentage = 19
+Elapsed Time = 236.023145199
+
+
+n_bin = 9
+b_size = 26
+c_size = 26
+Failure = 177
+Total = 960
+Percentage = 18
+Elapsed Time = 231.22130394
+
+
+n_bin = 9
+b_size = 25
+c_size = 25
+Failure = 139
+Total = 960
+Percentage = 14
+Elapsed Time = 230.921309948
+
+
+n_bin = 9
+b_size = 24
+c_size = 24
+Failure = 150
+Total = 960
+Percentage = 15
+Elapsed Time = 259.503391027
+
+
+n_bin = 9
+b_size = 23
+c_size = 23
+Failure = 52
+Total = 960
+Percentage = 5
+Elapsed Time = 284.38204813
+
+
+n_bin = 9
+b_size = 22
+c_size = 22
+Failure = 89
+Total = 960
+Percentage = 9
+Elapsed Time = 269.96307683
+
+
+n_bin = 9
+b_size = 21
+c_size = 21
+Failure = 120
+Total = 960
+Percentage = 12
+Elapsed Time = 263.348264217
+
+
+n_bin = 9
+b_size = 20
+c_size = 20
+Failure = 96
+Total = 960
+Percentage = 10
+Elapsed Time = 297.257424831
+
+
+n_bin = 9
+b_size = 19
+c_size = 19
+Failure = 83
+Total = 960
+Percentage = 8
+Elapsed Time = 327.41351819
+
+
+n_bin = 9
+b_size = 18
+c_size = 18
+Failure = 91
+Total = 960
+Percentage = 9
+Elapsed Time = 313.098152876
+
+
+n_bin = 9
+b_size = 17
+c_size = 17
+Failure = 74
+Total = 960
+Percentage = 7
+Elapsed Time = 356.569403887
+
+
+n_bin = 9
+b_size = 16
+c_size = 16
+Failure = 85
+Total = 960
+Percentage = 8
+Elapsed Time = 370.610965967
+
+
+n_bin = 9
+b_size = 15
+c_size = 15
+Failure = 60
+Total = 960
+Percentage = 6
+Elapsed Time = 406.351996183
+
+
+n_bin = 9
+b_size = 14
+c_size = 14
+Failure = 81
+Total = 960
+Percentage = 8
+Elapsed Time = 444.014019012
+
+
+n_bin = 9
+b_size = 13
+c_size = 13
+Failure = 88
+Total = 960
+Percentage = 9
+Elapsed Time = 480.241621971
+
+
+n_bin = 9
+b_size = 12
+c_size = 12
+Failure = 78
+Total = 960
+Percentage = 8
+Elapsed Time = 616.189776897
+
+
+n_bin = 9
+b_size = 11
+c_size = 11
+Failure = 82
+Total = 960
+Percentage = 8
+Elapsed Time = 655.731989861
+
+
+n_bin = 9
+b_size = 10
+c_size = 10
+Failure = 84
+Total = 960
+Percentage = 8
+Elapsed Time = 859.764851809
+
+
+n_bin = 9
+b_size = 9
+c_size = 9
+Failure = 102
+Total = 960
+Percentage = 10
+Elapsed Time = 996.999448061
+
+
+n_bin = 9
+b_size = 8
+c_size = 8
+Failure = 99
+Total = 960
+Percentage = 10
+Elapsed Time = 1324.36571503
+
+
+n_bin = 9
+b_size = 7
+c_size = 7
+Failure = 127
+Total = 960
+Percentage = 13
+Elapsed Time = 1684.97645092
+
+
+n_bin = 9
+b_size = 6
+c_size = 6
+Failure = 139
+Total = 960
+Percentage = 14
+Elapsed Time = 2375.67476892
+
+
+n_bin = 9
+b_size = 5
+c_size = 5
+Failure = 155
+Total = 960
+Percentage = 16
+Elapsed Time = 3948.34994817
+
+
+n_bin = 10
+b_size = 30
+c_size = 30
+Failure = 241
+Total = 960
+Percentage = 25
+Elapsed Time = 272.895942211
+
+
+n_bin = 10
+b_size = 29
+c_size = 29
+Failure = 287
+Total = 960
+Percentage = 29
+Elapsed Time = 269.165431023
+
+
+n_bin = 10
+b_size = 28
+c_size = 28
+Failure = 188
+Total = 960
+Percentage = 19
+Elapsed Time = 313.535801888
+
+
+n_bin = 10
+b_size = 27
+c_size = 27
+Failure = 156
+Total = 960
+Percentage = 16
+Elapsed Time = 292.687603951
+
+
+n_bin = 10
+b_size = 26
+c_size = 26
+Failure = 129
+Total = 960
+Percentage = 13
+Elapsed Time = 283.715232849
+
+
+n_bin = 10
+b_size = 25
+c_size = 25
+Failure = 126
+Total = 960
+Percentage = 13
+Elapsed Time = 280.575327873
+
+
+n_bin = 10
+b_size = 24
+c_size = 24
+Failure = 69
+Total = 960
+Percentage = 7
+Elapsed Time = 318.222364902
+
+
+n_bin = 10
+b_size = 23
+c_size = 23
+Failure = 48
+Total = 960
+Percentage = 5
+Elapsed Time = 355.856757879
+
+
+n_bin = 10
+b_size = 22
+c_size = 22
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 339.694766045
+
+
+n_bin = 10
+b_size = 21
+c_size = 21
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 327.726557016
+
+
+n_bin = 10
+b_size = 20
+c_size = 20
+Failure = 49
+Total = 960
+Percentage = 5
+Elapsed Time = 386.117233992
+
+
+n_bin = 10
+b_size = 19
+c_size = 19
+Failure = 74
+Total = 960
+Percentage = 7
+Elapsed Time = 412.739017963
+
+
+n_bin = 10
+b_size = 18
+c_size = 18
+Failure = 71
+Total = 960
+Percentage = 7
+Elapsed Time = 384.886025906
+
+
+n_bin = 10
+b_size = 17
+c_size = 17
+Failure = 68
+Total = 960
+Percentage = 7
+Elapsed Time = 439.831356049
+
+
+n_bin = 10
+b_size = 16
+c_size = 16
+Failure = 43
+Total = 960
+Percentage = 4
+Elapsed Time = 466.332936049
+
+
+n_bin = 10
+b_size = 15
+c_size = 15
+Failure = 37
+Total = 960
+Percentage = 3
+Elapsed Time = 535.932579994
+
+

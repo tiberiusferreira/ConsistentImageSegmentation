@@ -1,0 +1,260 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import collections
+import colorsys
+import rospy
+import numpy as np
+import cv2
+import random
+import time
+
+from robot_interaction_experiment.msg import Histograms
+from robot_interaction_experiment.msg import Histograms_List
+from robot_interaction_experiment.msg import Detected_Objects_List
+from robot_interaction_experiment.msg import Detected_Object_Words_Histogram
+from robot_interaction_experiment.msg import Detected_Objects_Words_Histogram_List
+from robot_interaction_experiment.msg import Detected_Object
+from robot_interaction_experiment.msg import Data_To_Visualize
+from robot_interaction_experiment.msg import Descriptors_Histograms
+
+from multimodal.online_learner import OnlineLearner
+import std_msgs
+
+words_dictionary = None
+pointed_object = None
+
+
+def keep_detected_objects(msg):
+    global detected_objects_list
+    detected_objects_list = msg.detected_objects_list
+
+def keep_pointed_object(msg):
+    global pointed_object
+    pointed_object = msg
+
+def send_words(msg):
+    if msg.data == 'test':
+        print 'send_words'
+        features = pointed_object.features
+        vector = np.array(
+         features.shape_histogram
+         + features.colors_histogram
+        #+ features.angles_histogram
+        )
+        text_hist = OL.treat_new_image_descriptor(vector)
+        print type(text_hist), text_hist
+        indices = text_hist[0].argsort()[-3:][::-1]
+        print indices
+        best_words = words_dictionary[indices]
+        print best_words
+        test_words_pub.publish(best_words)
+
+def add_to_reconstruct(msg):
+    global words_dictionary
+    global test_histograms_deque
+    
+    test_histograms_deque.appendleft(msg)
+    words_dictionary = msg.words_dictionary
+
+def add_to_train(msg):
+    global words_dictionary
+    global input_histograms_deque
+    
+    input_histograms_deque.appendleft(msg)
+    words_dictionary = msg.words_dictionary
+
+def test_mode(msg):
+    global testing_objects_list
+    testing_objects_list = msg.detected_objects_list
+
+if __name__ == '__main__':
+    img_width = 640
+    N_COLORS = 80
+    #np.random.seed(42)
+    input_histograms_deque = collections.deque()
+    test_histograms_deque = collections.deque()
+    testing_objects_list = []
+    detected_objects_list = []
+    
+    rospy.init_node('training_and_testing_manager', anonymous=True)
+    rospy.Subscriber('histograms', Histograms, add_to_train, queue_size=1)
+    rospy.Subscriber('detected_objects_list', Detected_Objects_List, keep_detected_objects, queue_size=1)
+    detected_objects_words_histogram_list_publisher = rospy.Publisher('detected_objects_words_histogram_list', Detected_Objects_Words_Histogram_List)
+    reconstructed_histograms_pub = rospy.Publisher('reconstructed_histograms', Histograms)
+    #reconstructed_detected_objects_pub = rospy.Publisher('reconstructed_detected_objects', Detected_Objects_List)
+    less_known_object_pub = rospy.Publisher('less_known_object', Detected_Object)
+    NMF_dictionary_pub = rospy.Publisher('NMF_dictionary', Histograms_List)
+    rospy.Subscriber('testing_histograms', Histograms, add_to_reconstruct)
+    #rospy.Subscriber('pointed_object', Detected_Object, keep_pointed_object)
+    #rospy.Subscriber('learning_status', std_msgs.msg.String, send_words)
+    data_to_visualize_pub = rospy.Publisher("data_to_visualize", Data_To_Visualize)
+    
+    speech_to_synthesize_pub = rospy.Publisher('speech_to_synthesize',  std_msgs.msg.String)
+    
+    language  = str(rospy.get_param('~language', 'fr')) #en-us
+    
+    n_iterations = 300 #50
+    K = 8
+    keep_dico = True
+    OL = OnlineLearner(K, n_iterations, keep_dico=keep_dico)
+    OBJECTS_IMAGE_SIZE = 30
+    
+    testing = False
+    trained_once = False
+
+    train_count = 0
+    img_count = None
+    
+    last_len_random = 0
+    
+    #OL.treat_new_multimodal_examples_list([[np.append(fake_shape_histogram, fake_colors_histogram), fake_words_histogram]])
+
+    starting_time = time.time()
+    
+    already_said_over = False
+
+    while not rospy.is_shutdown():
+        """
+        img_count = np.zeros((800, 1200), dtype=np.uint8)
+        cv2.putText(img_count, str(train_count), (500, 500), cv2.FONT_HERSHEY_PLAIN, 15, 255)
+        cv2.imshow("count", img_count)
+        k = cv2.waitKey(1)
+        """
+        
+        img_time_count = np.zeros((1000, 1700), dtype=np.uint8)
+        passed_time = time.time() - starting_time
+        remaining_time = int(600.0 - passed_time)
+        if not already_said_over and remaining_time <= 0:
+            if language == "en-us":
+                speech_to_synthesize_pub.publish("ok. the time is over")
+            else:
+                speech_to_synthesize_pub.publish("ça y est le temps est écoulé")
+            already_said_over = True
+        cv2.putText(img_time_count, str(remaining_time / 60) + ":" + str(remaining_time % 60), (400, 600), cv2.FONT_HERSHEY_PLAIN, 15, 255)
+        cv2.imshow("temps restant", img_time_count)
+        k = cv2.waitKey(1)
+        
+        # TRAINING
+        while input_histograms_deque:
+            # TRAIN
+            print 'train'
+            train_count += 1
+            input_histograms = input_histograms_deque.pop()
+            descriptors_list = [map(np.array, [input_histograms.shape_histogram + input_histograms.colors_histogram, input_histograms.words_histogram])]
+            OL.treat_new_multimodal_examples_list(descriptors_list)
+            trained_once = True
+            
+            # DATA TO VISUALIZE
+            data_to_visualize = Data_To_Visualize()
+            data_to_visualize.message = "train"
+            data_to_visualize.K = K
+            data_to_visualize.n_iterations = n_iterations
+            data_to_visualize.words_dictionary = words_dictionary
+            
+            input_descriptors = Descriptors_Histograms()
+            input_descriptors.shape_histogram = input_histograms.shape_histogram
+            input_descriptors.colors_histogram = input_histograms.colors_histogram
+            input_descriptors.words_histogram = input_histograms.words_histogram
+            data_to_visualize.input_histograms = input_descriptors
+            
+            NMF_Dico = OL._learner.get_dico()
+            NMF_dictionaries = []
+            for i_K in range(K):
+                Ki_descriptors = Descriptors_Histograms()
+                Ki_descriptors.shape_histogram = NMF_Dico[i_K][0:OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE]
+                Ki_descriptors.colors_histogram = NMF_Dico[i_K][OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE : OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS]
+                Ki_descriptors.words_histogram = NMF_Dico[i_K][OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS:]
+                NMF_dictionaries.append(Ki_descriptors)
+            data_to_visualize.NMF_dictionaries = NMF_dictionaries
+            
+            #empty_histograms = Descriptors_Histograms()
+            #data_to_visualize.reconstructed_histograms = empty_histograms
+            
+            data_to_visualize_pub.publish(data_to_visualize)
+        
+        # TESTING
+        while test_histograms_deque:
+            # TEST
+            print 'test'
+            test_histograms = test_histograms_deque.pop()
+            test_descriptors = np.array(test_histograms.shape_histogram + test_histograms.colors_histogram)
+            reconstructed_histograms_vector = OL.treat_new_image_descriptor(test_descriptors)[0]
+            
+            # DATA TO VISUALIZE
+            data_to_visualize = Data_To_Visualize()
+            data_to_visualize.message = "test"
+            #data_to_visualize.K = K
+            data_to_visualize.n_iterations = n_iterations
+            data_to_visualize.words_dictionary = words_dictionary
+            
+            input_descriptors = Descriptors_Histograms()            
+            input_descriptors.shape_histogram = test_histograms.shape_histogram
+            input_descriptors.colors_histogram = test_histograms.colors_histogram
+            input_descriptors.words_histogram = test_histograms.words_histogram
+            data_to_visualize.input_histograms = input_descriptors
+            
+            #data_to_visualize.NMF_dictionaries = None
+            
+            reconstructed_descriptors = Descriptors_Histograms()
+            reconstructed_descriptors.shape_histogram = reconstructed_histograms_vector[0:OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE]
+            reconstructed_descriptors.colors_histogram = reconstructed_histograms_vector[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE : OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS]
+            reconstructed_descriptors.words_histogram = reconstructed_histograms_vector[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS:]
+            data_to_visualize.reconstructed_histograms = reconstructed_descriptors
+            
+            data_to_visualize_pub.publish(data_to_visualize)
+            
+            reconstructed_histograms = Histograms()
+            reconstructed_histograms.shape_histogram = reconstructed_descriptors.shape_histogram
+            reconstructed_histograms.colors_histogram = reconstructed_descriptors.colors_histogram
+            reconstructed_histograms.words_histogram = reconstructed_descriptors.words_histogram
+            reconstructed_histograms.words_dictionary = test_histograms.words_dictionary
+            reconstructed_histograms_pub.publish(reconstructed_histograms)
+        
+        # ASKING
+        detected_objects_list_copy = [x for x in detected_objects_list]
+        if OL._learner.is_trained():
+            print "la"
+            highest_error = 0.0
+            i_highest_error_object = None
+            if detected_objects_list_copy != []:
+                for i_object, detected_object in enumerate(detected_objects_list_copy):
+                    vision_features = detected_object.features
+                    shape_histogram = np.array(vision_features.shape_histogram)
+                    colors_histogram = np.array(vision_features.colors_histogram)
+                    test_descriptors = np.append(shape_histogram, colors_histogram)
+                    reconstructed_histograms_vector = OL.treat_new_image_descriptor(test_descriptors)[0]
+                    
+                    reconstructed_shape_histogram = np.array(reconstructed_histograms_vector[0:OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE])
+                    reconstructed_shape_histogram /= np.sum(reconstructed_shape_histogram)
+                    reconstructed_colors_histogram = np.array(reconstructed_histograms_vector[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE:OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS])
+                    reconstructed_colors_histogram /= np.sum(reconstructed_colors_histogram)
+                    reconstructed_words_histogram = np.array(reconstructed_histograms_vector[OBJECTS_IMAGE_SIZE*OBJECTS_IMAGE_SIZE+N_COLORS:])
+                    shape_error = np.sum(np.abs(shape_histogram - reconstructed_shape_histogram)) / 2.0
+                    colors_error = np.sum(np.abs(colors_histogram - reconstructed_colors_histogram)) / 2.0
+                    vision_error = (shape_error + colors_error) / 2.0
+                    #print shape_error, colors_error, vision_error
+                    
+                    total_error = vision_error + np.abs(np.sum(reconstructed_words_histogram) - 1)
+                    if total_error > highest_error:
+                        #print "worst:", vision_error, np.abs(np.sum(reconstructed_words_histogram) - 1)
+                        highest_error = total_error
+                        i_highest_error_object = i_object
+                    #print i_object, shape_error, color_error, total_error
+                    #vision_features.shape_histogram += reconstructed_shape_histogram
+                    #vision_features.colors_histogram += reconstructed_colors_histogram
+                #reconstructed_detected_objects_pub.publish(detected_objects_list)
+                detected_objects_list = []
+                if i_highest_error_object != None:
+                    #print detected_objects_list_copy[i_highest_error_object].id, "est le moins bien reconstruit", highest_error
+                    print highest_error
+                    if highest_error > 0.5:
+                        less_known_object_pub.publish(detected_objects_list_copy[i_highest_error_object])
+                    else:
+                        print "not enough"
+                        msg = Detected_Object()
+                        less_known_object_pub.publish(msg)
+        elif detected_objects_list_copy != [] and len(detected_objects_list_copy) != last_len_random:
+            print "LAA"
+            less_known_object_pub.publish(random.choice(detected_objects_list_copy))
+            last_len_random = len(detected_objects_list_copy)
