@@ -61,7 +61,7 @@ label = ''
 INTERACTIONS = 0
 loaded = 0
 DEBUG = 0
-SHOW = 0
+show = 0
 saving_learn = 0
 saved = 0
 color = ''
@@ -72,7 +72,7 @@ rotation = -1
 saving_test = 0
 failure = 0
 total = 0
-percentage = -1
+tst_dsk_percentage = -1
 def nothing(x):
     pass
 
@@ -267,7 +267,7 @@ def load_class(value):
     print ('Loaded')
 
 def show(value):
-    global SHOW
+    global show
     SHOW = value
 
 def debug(value):
@@ -423,7 +423,7 @@ def objects_detector(img_bgr8):
             print ('Done saving')
     best_rot = 0
     best_perc = 0
-    global SHOW
+    global show
     if SHOW == 0:
         return
     if not hasattr(clf, 'support_'):
@@ -523,7 +523,7 @@ def learn_hog(img):
     img_list.append(img[:, 12:])
     img_list.append(img[:, :l-12])
     index = 0
-    global SHOW
+    global show
     for imgs in img_list:
         imgs = cv2.resize(imgs, (115, 120), interpolation=cv2.INTER_AREA)  # resize image
         if SHOW == 1:
@@ -539,7 +539,7 @@ def test_from_disk(value):
     global label
     global rotation
     global total
-    global percentage
+    global tst_dsk_percentage
     total = 0
     global failure
     failure = 0
@@ -595,7 +595,7 @@ def big_test(value):
             global label
             global failure
             global total
-            global percentage
+            global tst_dsk_percentage
             print ('Creating HoG')
             for filename in os.listdir(path):
                 # print 'Learning ' + str(filename)

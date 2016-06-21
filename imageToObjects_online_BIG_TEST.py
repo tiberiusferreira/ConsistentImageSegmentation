@@ -40,7 +40,7 @@ label = ''
 recording_index = 0
 loaded = 0
 DEBUG = 0
-SHOW = 0
+show = 0
 saving_learn = 0
 saved = 0
 color = ''
@@ -52,7 +52,7 @@ rotation = -1
 saving_test = 0
 failure = 0
 total = 0
-percentage = -1
+tst_dsk_percentage = -1
 live = 0
 shuffled_y = list()
 shuffled_x = list()
@@ -246,7 +246,7 @@ def load_class(value):
 
 
 def show(value):
-    global SHOW
+    global show
     SHOW = value
 
 
@@ -398,7 +398,7 @@ def objects_detector(img_bgr8):
             print('Elapsed Time TOTAL = ' + str(time.time() - start_time2) + ' FPS = ' + str(100/(time.time() - start_time2)) + '\n')
         print('Elapsed Time Single Example = ' + str(time.time() - start_time3) + '\n')
         print('Elapsed Time Single Example Obj Detc = ' + str(time.time() - objects_detector_time) + '\n')
-    global SHOW
+    global show
     if SHOW == 0:
         return
     global DEBUG
@@ -507,7 +507,7 @@ def learn_hog(img):
             img_list.append((img[i:w-i, i:l-i]))  # cut up and down and left and right
     # hog = cv2.HOGDescriptor()
     index = 0
-    global SHOW
+    global show
     # print('Elapsed Time Pre HoG = ' + str(time.time() - start_time) + '\n')
     start_time = time.time()
     opencv_hog = cv2.HOGDescriptor((128, 128), (B_SIZE, B_SIZE), (b_stride, b_stride), (C_SIZE, C_SIZE), N_BIN)
@@ -536,7 +536,7 @@ def test_from_disk(value):
     global label
     global rotation
     global total
-    global percentage
+    global tst_dsk_percentage
     TOTAL = 0
     global failure
     FAILURE = 0
@@ -603,7 +603,7 @@ def big_test(value):
     global label
     global failure
     global total
-    global percentage
+    global tst_dsk_percentage
     for n_neighbors in range(11, 2, -1):
         global CLF
         CLF = KNeighborsClassifier(n_neighbors=n_neighbors)
