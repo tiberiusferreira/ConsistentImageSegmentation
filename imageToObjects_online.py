@@ -7,6 +7,7 @@ from scipy import ndimage
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from robot_interaction_experiment.msg import Vision_Features
+from robot_interaction_experiment.msg import Detected_Object
 from robot_interaction_experiment.msg import Detected_Objects_List
 import ImgAveraging
 from sklearn.linear_model import SGDClassifier
@@ -24,7 +25,7 @@ import pylab as Plot
 import tsne
 
 ####################
-# Constants        #
+# Constants max HoG size = 900       #
 ####################
 
 NB_MSG_MAX = 50
@@ -407,6 +408,8 @@ def hog_info(value):
     print(str(myset))
     print('Current HoG size:')
     print(len(hog_list))
+    print("Single HoG size: ")
+    print(len(hog_list[0]))
 
 
 def live_learn(value):
@@ -469,7 +472,7 @@ def live_learn(value):
             print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
 
 
-def show_unrotated_img(img):
+def show_img_to_be_sent(img):
     img_rotation = get_img_rot(img)
     if not img_rotation == 0:
         rows, cols, d = img.shape
@@ -511,72 +514,43 @@ def objects_detector(img_bgr8):
     if live == 1:
         live_learn(img_bgr8)
     if show:
-        show_unrotated_img(img_clean_bgr_class)
-    # opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
-    # for i in range(4):
-    #     img_clean_GRAY_class = cv2.resize(img_clean_GRAY_class, (128, 128))
-    #     fd4 = opencv_hog.compute(img_clean_GRAY_class)
-    #     fd4 = fd4.reshape(1, -1)
-    #     for pred_percentage in clf.predict_proba(fd4)[0]:
-    #         if pred_percentage > best_perc:
-    #             best_perc = pred_percentage
-    #             best_rot = i
-    #
-    #     rows, cols = img_clean_GRAY_class.shape
-    #     M = cv2.getRotationMatrix2D((cols / 2, rows / 2), 90, 1)
-    #     img_clean_GRAY_class = cv2.warpAffine(img_clean_GRAY_class, M, (cols, rows))
-    #
-    #
-    # # print (best_rot)
-    # if not best_rot == 0:
-    #     rows, cols, d = img_clean_bgr_class.shape
-    #     M = cv2.getRotationMatrix2D((cols / 2, rows / 2), best_rot * 90, 1)
-    #     img_clean_bgr_class = cv2.warpAffine(img_clean_bgr_class, M, (cols, rows))
-    # cv2.imshow('Sent', cv2.resize(img_clean_bgr_class, (256, 256)))
-
-    #     detected_object = Detected_Object()
-    #     detected_object.id = count
-    #     detected_object.image = CvBridge().cv2_to_imgmsg(img_bgr8_resized, encoding="passthrough")
-    #     detected_object.center_x = unrot_center_x / float(resolution_x)  # proportion de la largeur
-    #     detected_object.center_y = unrot_center_y / float(resolution_x)  # proportion de la largeur aussi
-    #     detected_object.features = getpixelfeatures(object_img_rgb)
-    #     detected_object.features.hog_histogram = GetHOGFeatures(object_img_rgb)
-    #     detected_objects_list.append(detected_object)
-    # detected_objects_list_msg = Detected_Objects_List()
-    # detected_objects_list_msg.detected_objects_list = detected_objects_list
-    # detected_objects_list_publisher.publish(detected_objects_list_msg)
-
-    # cv2.rectangle(img_copy, (margin, margin), (resolution_x - margin, resolution_y - margin), (255, 255, 255))
-    # cv2.imshow('detected_object', img_copy)
-    # try:
-    #     img_bgr8_resized
-    # except NameError:
-    #     pass
-    # else:
-    #     if 1:
-    #         cv2.imshow('a', img_bgr8_resized)
-    #         cv2.imshow('ROTATED', rotated_img_obj)
-    #         cv2.imshow('With Cnt', object_img_rgb2)
-    #     cv2.waitKey(1)
+        show_img_to_be_sent(img_clean_bgr_class)
+    rows, cols, d = img_clean_bgr_class.shape
+    detected_object = Detected_Object()
+    detected_object.id = 1
+    detected_object.image = CvBridge().cv2_to_imgmsg(img_clean_bgr_class, encoding="passthrough")
+    detected_object.center_x = rows / 2  # proportion de la largeur
+    detected_object.center_y = cols / 2  # proportion de la largeur aussi
+    detected_object.features.colors_histogram = getpixelfeatures(img_clean_bgr_class)
+    detected_object.features.hog_histogram = get_img_hog(img_clean_bgr_class)[0]
+    detected_objects_list.append(detected_object)
+    detected_objects_list_msg = Detected_Objects_List()
+    detected_objects_list_msg.detected_objects_list = detected_objects_list
+    detected_objects_list_publisher.publish(detected_objects_list_msg)
 
 
 def get_img_rot(img_bgr):
-    img_gry = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     best_rot = 0
     best_perc = 0
-    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
     for i in range(4):
-        h1 = opencv_hog.compute(img_gry)
-        fd = np.reshape(h1, (len(h1),))
-        fd = fd.reshape(1, -1)
+        fd = get_img_hog(img_bgr)
         for percentage in clf.predict_proba(fd)[0]:
             if percentage > best_perc:
                 best_perc = percentage
                 best_rot = i
-        rows, cols = img_gry.shape
+        rows, cols = img_bgr.shape
         m = cv2.getRotationMatrix2D((cols / 2, rows / 2), 90, 1)
-        img_gry = cv2.warpAffine(img_gry, m, (cols, rows))
+        img_bgr = cv2.warpAffine(img_bgr, m, (cols, rows))
     return best_rot
+
+
+def get_img_hog(img_bgr):
+    img_gry = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
+    h1 = opencv_hog.compute(img_gry)
+    fd = np.reshape(h1, (len(h1),))
+    fd = fd.reshape(1, -1)
+    return fd
 
 
 def learn_hog(img):
@@ -731,41 +705,39 @@ def big_test(value):
     global failure
     global total
     global tst_dsk_percentage
-    for n_neighbors in range(11, 2, -1):
-        global clf
-        clf = KNeighborsClassifier(n_neighbors=n_neighbors)
-        for bin_ in range(8, 2, -1):
-            for block in (64, 128):
-                for stride in (1, 2, 4):
-                    cell = block / 2
-                    b_stride = cell * stride
-                    start_time = time.time()
-                    n_bin = bin_
-                    b_size = block
-                    c_size = cell
-                    labels = list()
-                    hog_list = list()
-                    print('Testing HoG')
-                    print('neighbors = ' + str(n_neighbors) + '\n')
-                    print('n_bin = ' + str(n_bin) + '\n')
-                    print('b_stride = ' + str(b_stride) + '\n')
-                    print('b_size = ' + str(b_size) + '\n')
-                    print('c_size = ' + str(c_size) + '\n')
-                    learn_from_disk(1)
-                    test_from_disk(1)
-                    with open('HoG_Trials.txt', 'a') as the_file:
-                        the_file.write('neighbors = ' + str(n_neighbors) + '\n')
-                        the_file.write('n_bin = ' + str(n_bin) + '\n')
-                        the_file.write('b_size = ' + str(b_size) + '\n')
-                        the_file.write('b_stride = ' + str(b_stride) + '\n')
-                        the_file.write('c_size = ' + str(c_size) + '\n')
-                        the_file.write('Failure = ' + str(failure) + '\n')
-                        the_file.write('Total = ' + str(total) + '\n')
-                        the_file.write('Percentage = ' + str(tst_dsk_percentage) + '\n')
-                        the_file.write('Elapsed Time = ' + str(time.time() - start_time) + '\n\n\n')
-                    print('Written')
-                    print('Elapsed Time = ' + str(time.time() - start_time) + '\n')
-    print('Big Test Done')
+    global clf
+    for bin_ in range(16, 2, -1):
+        for block in (32, 64, 128):
+            for stride in (1, 2, 4):
+                cell = block / 2
+                b_stride = cell * stride
+                start_time = time.time()
+                n_bin = bin_
+                b_size = block
+                c_size = cell
+                labels = list()
+                hog_list = list()
+                print('Testing HoG')
+                print('n_bin = ' + str(n_bin) + '\n')
+                print('b_stride = ' + str(b_stride) + '\n')
+                print('b_size = ' + str(b_size) + '\n')
+                print('c_size = ' + str(c_size) + '\n')
+                learn_from_disk(1)
+                test_from_disk(1)
+                with open('HoG_Trials.txt', 'a') as the_file:
+                    the_file.write('n_bin = ' + str(n_bin) + '\n')
+                    the_file.write('b_size = ' + str(b_size) + '\n')
+                    the_file.write('b_stride = ' + str(b_stride) + '\n')
+                    the_file.write('c_size = ' + str(c_size) + '\n')
+                    the_file.write('single HoG size = ' + str(len(hog_list[0])) + '\n')
+                    the_file.write('Failure = ' + str(failure) + '\n')
+                    the_file.write('Total = ' + str(total) + '\n')
+                    the_file.write('Percentage = ' + str(tst_dsk_percentage) + '\n')
+                    the_file.write('Elapsed Time = ' + str(time.time() - start_time) + '\n\n\n')
+                print('Written')
+                print('Elapsed Time = ' + str(time.time() - start_time) + '\n')
+                clf = SGDClassifier(loss='log')
+print('Big Test Done')
 
 
 def getpixelfeatures(object_img_bgr8):
@@ -788,9 +760,9 @@ def getpixelfeatures(object_img_bgr8):
     if sum != 0:
         object_shape = object_shape / float(np.sum(object_shape))
     features = Vision_Features()
-    features.colors_histogram = colors_histo
-    features.shape_histogram = object_shape
-    return features
+    # features.colors_histogram = colors_histo
+    # features.shape_histogram = object_shape
+    return colors_histo
 
 
 if __name__ == '__main__':
@@ -818,6 +790,7 @@ if __name__ == '__main__':
     cv2.createTrackbar('Predict HoG', MAIN_WINDOW_NAME, 0, 1, hog_pred)
     cv2.createTrackbar("Depth Capture Range", MAIN_WINDOW_NAME, int(100 * val_depth_capture), 150, changecapture)
     cv2.imshow(MAIN_WINDOW_NAME, 0)
+    # big_test(1)
     print("Creating subscribers")
     image_sub_rgb = rospy.Subscriber("/camera/rgb/image_rect_color", Image, callback_rgb, queue_size=1)
     image_sub_depth = rospy.Subscriber("/camera/depth_registered/image_raw/", Image, callback_depth, queue_size=1)
