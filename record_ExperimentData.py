@@ -36,7 +36,7 @@ def callback_rgb(data):
             return
         counter = 0
         print 'Recording experiment ' + str(speech_counter) + '\n'
-        f.write('#Informations about sample, No. '+str(speech_counter) + '\n')
+        f.write('#Informations about sample, No. ' + str(speech_counter) + '\n')
         f.write('#Format = Dictionary / Detected Words / Shape / HoG / Color / Words Histogram\n')
         for det_object in data.detected_objects_list:
             f.write('#Object ' + str(det_object.id) + '\n')
@@ -56,7 +56,7 @@ def callback_rgb(data):
             except CvBridgeError, e:
                 print e
                 return
-            cv2.imwrite('RecordedData/Exp_' + str(counter) + '_objs_' + str(det_object.id) + '.png', object_image)
+            cv2.imwrite('RecordedData/Exp_' + str(speech_counter) + '_objs_' + str(det_object.id) + '.png', object_image)
         speech_counter += 1
         got_speech = 0
     finally:

@@ -24,9 +24,17 @@ def create_hist_matrix(file):
                 dict.append(string)
                 got_dic = 1
         if lines_since_obj == 4 or lines_since_obj == 5 or lines_since_obj == 6:  # Respectively HoG, Color and Words
+            hog_cont = 0
             for string in line.strip().split(','):
                 string = float(string)
                 concat.append(string)
+                hog_cont += 1
+                print hog_cont
+            if lines_since_obj == 4:
+                while hog_cont < 900:
+                    print hog_cont
+                    concat.append(0)
+                    hog_cont += 1
         lines_since_obj += 1
         if '#Object' in line:
             if concat:
@@ -35,6 +43,7 @@ def create_hist_matrix(file):
             lines_since_obj = 1
     matrice_hist.append(concat)
     print dict
+    print np.shape(matrice_hist)
 
 
 
@@ -65,6 +74,7 @@ if __name__ == '__main__':
 
     words_dictionary_visual = dict
     Xres = matrice_hist
+    # print matrice_hist
     NMF_dictionary_visual = np.array([np.array([Xres[0, 0:n_shape], Xres[0, n_shape:n_color + n_shape],
                                                 Xres[0, n_color + n_shape:]])])
     for i in range(1, len(Xres)):

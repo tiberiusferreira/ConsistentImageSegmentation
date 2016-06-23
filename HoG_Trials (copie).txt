@@ -1,0 +1,924 @@
+n_bin = 16
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 3136
+Failure = 7
+Total = 960
+Percentage = 0
+Elapsed Time = 185.554450035
+
+
+n_bin = 16
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 1024
+Failure = 32
+Total = 960
+Percentage = 3
+Elapsed Time = 76.0177099705
+
+
+n_bin = 16
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 576
+Failure = 8
+Total = 960
+Percentage = 0
+Elapsed Time = 63.5538549423
+
+
+n_bin = 16
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 256
+Failure = 8
+Total = 960
+Percentage = 0
+Elapsed Time = 40.9611949921
+
+
+n_bin = 16
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 64
+Failure = 49
+Total = 960
+Percentage = 5
+Elapsed Time = 57.0087630749
+
+
+n_bin = 16
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 64
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 56.8150560856
+
+
+n_bin = 15
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 2940
+Failure = 10
+Total = 960
+Percentage = 1
+Elapsed Time = 177.875772953
+
+
+n_bin = 15
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 960
+Failure = 32
+Total = 960
+Percentage = 3
+Elapsed Time = 70.5572099686
+
+
+n_bin = 15
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 540
+Failure = 8
+Total = 960
+Percentage = 0
+Elapsed Time = 73.6791601181
+
+
+n_bin = 15
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 240
+Failure = 8
+Total = 960
+Percentage = 0
+Elapsed Time = 50.1379930973
+
+
+n_bin = 15
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 60
+Failure = 51
+Total = 960
+Percentage = 5
+Elapsed Time = 59.0732560158
+
+
+n_bin = 15
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 60
+Failure = 41
+Total = 960
+Percentage = 4
+Elapsed Time = 55.2360610962
+
+
+n_bin = 14
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 2744
+Failure = 13
+Total = 960
+Percentage = 1
+Elapsed Time = 171.095419884
+
+
+n_bin = 14
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 896
+Failure = 33
+Total = 960
+Percentage = 3
+Elapsed Time = 67.3179941177
+
+
+n_bin = 14
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 504
+Failure = 17
+Total = 960
+Percentage = 1
+Elapsed Time = 62.2214639187
+
+
+n_bin = 14
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 224
+Failure = 10
+Total = 960
+Percentage = 1
+Elapsed Time = 40.4812839031
+
+
+n_bin = 14
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 56
+Failure = 39
+Total = 960
+Percentage = 4
+Elapsed Time = 58.8878810406
+
+
+n_bin = 14
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 56
+Failure = 40
+Total = 960
+Percentage = 4
+Elapsed Time = 62.2718410492
+
+
+n_bin = 13
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 2548
+Failure = 7
+Total = 960
+Percentage = 0
+Elapsed Time = 176.113991022
+
+
+n_bin = 13
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 832
+Failure = 37
+Total = 960
+Percentage = 3
+Elapsed Time = 62.7032978535
+
+
+n_bin = 13
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 468
+Failure = 8
+Total = 960
+Percentage = 0
+Elapsed Time = 60.7768452168
+
+
+n_bin = 13
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 208
+Failure = 8
+Total = 960
+Percentage = 0
+Elapsed Time = 39.6894459724
+
+
+n_bin = 13
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 52
+Failure = 39
+Total = 960
+Percentage = 4
+Elapsed Time = 74.546984911
+
+
+n_bin = 13
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 52
+Failure = 35
+Total = 960
+Percentage = 3
+Elapsed Time = 81.9026548862
+
+
+n_bin = 12
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 2352
+Failure = 24
+Total = 960
+Percentage = 2
+Elapsed Time = 192.431614876
+
+
+n_bin = 12
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 768
+Failure = 30
+Total = 960
+Percentage = 3
+Elapsed Time = 70.4422709942
+
+
+n_bin = 12
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 432
+Failure = 8
+Total = 960
+Percentage = 0
+Elapsed Time = 56.1975030899
+
+
+n_bin = 12
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 192
+Failure = 9
+Total = 960
+Percentage = 0
+Elapsed Time = 36.2255911827
+
+
+n_bin = 12
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 48
+Failure = 48
+Total = 960
+Percentage = 5
+Elapsed Time = 55.4479579926
+
+
+n_bin = 12
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 48
+Failure = 37
+Total = 960
+Percentage = 3
+Elapsed Time = 54.6026029587
+
+
+n_bin = 11
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 2156
+Failure = 17
+Total = 960
+Percentage = 1
+Elapsed Time = 139.71808815
+
+
+n_bin = 11
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 704
+Failure = 38
+Total = 960
+Percentage = 3
+Elapsed Time = 56.6819930077
+
+
+n_bin = 11
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 396
+Failure = 11
+Total = 960
+Percentage = 1
+Elapsed Time = 55.0706698895
+
+
+n_bin = 11
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 176
+Failure = 8
+Total = 960
+Percentage = 0
+Elapsed Time = 37.4697630405
+
+
+n_bin = 11
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 44
+Failure = 28
+Total = 960
+Percentage = 2
+Elapsed Time = 54.6491529942
+
+
+n_bin = 11
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 44
+Failure = 25
+Total = 960
+Percentage = 2
+Elapsed Time = 54.2123370171
+
+
+n_bin = 10
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 1960
+Failure = 23
+Total = 960
+Percentage = 2
+Elapsed Time = 129.165357828
+
+
+n_bin = 10
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 640
+Failure = 45
+Total = 960
+Percentage = 4
+Elapsed Time = 68.1515579224
+
+
+n_bin = 10
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 360
+Failure = 4
+Total = 960
+Percentage = 0
+Elapsed Time = 58.8463661671
+
+
+n_bin = 10
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 160
+Failure = 14
+Total = 960
+Percentage = 1
+Elapsed Time = 43.4510171413
+
+
+n_bin = 10
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 40
+Failure = 18
+Total = 960
+Percentage = 1
+Elapsed Time = 80.5401530266
+
+
+n_bin = 10
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 40
+Failure = 21
+Total = 960
+Percentage = 2
+Elapsed Time = 97.4929990768
+
+
+n_bin = 9
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 1764
+Failure = 22
+Total = 960
+Percentage = 2
+Elapsed Time = 157.621099949
+
+
+n_bin = 9
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 576
+Failure = 38
+Total = 960
+Percentage = 3
+Elapsed Time = 50.6797370911
+
+
+n_bin = 9
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 324
+Failure = 9
+Total = 960
+Percentage = 0
+Elapsed Time = 50.3990650177
+
+
+n_bin = 9
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 144
+Failure = 14
+Total = 960
+Percentage = 1
+Elapsed Time = 34.2740240097
+
+
+n_bin = 9
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 36
+Failure = 5
+Total = 960
+Percentage = 0
+Elapsed Time = 53.9102270603
+
+
+n_bin = 9
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 36
+Failure = 4
+Total = 960
+Percentage = 0
+Elapsed Time = 54.6399979591
+
+
+n_bin = 8
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 1568
+Failure = 24
+Total = 960
+Percentage = 2
+Elapsed Time = 106.914747953
+
+
+n_bin = 8
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 512
+Failure = 49
+Total = 960
+Percentage = 5
+Elapsed Time = 46.8115620613
+
+
+n_bin = 8
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 288
+Failure = 10
+Total = 960
+Percentage = 1
+Elapsed Time = 48.0836391449
+
+
+n_bin = 8
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 128
+Failure = 21
+Total = 960
+Percentage = 2
+Elapsed Time = 33.4446389675
+
+
+n_bin = 8
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 32
+Failure = 32
+Total = 960
+Percentage = 3
+Elapsed Time = 53.9462502003
+
+
+n_bin = 8
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 32
+Failure = 33
+Total = 960
+Percentage = 3
+Elapsed Time = 54.2719430923
+
+
+n_bin = 7
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 1372
+Failure = 30
+Total = 960
+Percentage = 3
+Elapsed Time = 98.1728749275
+
+
+n_bin = 7
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 448
+Failure = 47
+Total = 960
+Percentage = 4
+Elapsed Time = 43.9438230991
+
+
+n_bin = 7
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 252
+Failure = 4
+Total = 960
+Percentage = 0
+Elapsed Time = 46.2686641216
+
+
+n_bin = 7
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 112
+Failure = 33
+Total = 960
+Percentage = 3
+Elapsed Time = 32.5785498619
+
+
+n_bin = 7
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 28
+Failure = 24
+Total = 960
+Percentage = 2
+Elapsed Time = 53.9359359741
+
+
+n_bin = 7
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 28
+Failure = 26
+Total = 960
+Percentage = 2
+Elapsed Time = 53.7459158897
+
+
+n_bin = 6
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 1176
+Failure = 32
+Total = 960
+Percentage = 3
+Elapsed Time = 88.8566811085
+
+
+n_bin = 6
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 384
+Failure = 57
+Total = 960
+Percentage = 5
+Elapsed Time = 40.7590382099
+
+
+n_bin = 6
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 216
+Failure = 5
+Total = 960
+Percentage = 0
+Elapsed Time = 44.961327076
+
+
+n_bin = 6
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 96
+Failure = 22
+Total = 960
+Percentage = 2
+Elapsed Time = 32.0866470337
+
+
+n_bin = 6
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 24
+Failure = 65
+Total = 960
+Percentage = 6
+Elapsed Time = 54.1038649082
+
+
+n_bin = 6
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 24
+Failure = 100
+Total = 960
+Percentage = 10
+Elapsed Time = 53.8335928917
+
+
+n_bin = 5
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 980
+Failure = 30
+Total = 960
+Percentage = 3
+Elapsed Time = 79.4783508778
+
+
+n_bin = 5
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 320
+Failure = 63
+Total = 960
+Percentage = 6
+Elapsed Time = 37.4730069637
+
+
+n_bin = 5
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 180
+Failure = 14
+Total = 960
+Percentage = 1
+Elapsed Time = 42.7031900883
+
+
+n_bin = 5
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 80
+Failure = 27
+Total = 960
+Percentage = 2
+Elapsed Time = 35.6882920265
+
+
+n_bin = 5
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 20
+Failure = 117
+Total = 960
+Percentage = 12
+Elapsed Time = 74.7475101948
+
+
+n_bin = 5
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 20
+Failure = 95
+Total = 960
+Percentage = 9
+Elapsed Time = 72.7128708363
+
+
+n_bin = 4
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 784
+Failure = 49
+Total = 960
+Percentage = 5
+Elapsed Time = 89.902700901
+
+
+n_bin = 4
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 256
+Failure = 63
+Total = 960
+Percentage = 6
+Elapsed Time = 50.2718060017
+
+
+n_bin = 4
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 144
+Failure = 27
+Total = 960
+Percentage = 2
+Elapsed Time = 57.407902956
+
+
+n_bin = 4
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 64
+Failure = 38
+Total = 960
+Percentage = 3
+Elapsed Time = 39.2075359821
+
+
+n_bin = 4
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 16
+Failure = 252
+Total = 960
+Percentage = 26
+Elapsed Time = 71.9318928719
+
+
+n_bin = 4
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 16
+Failure = 293
+Total = 960
+Percentage = 30
+Elapsed Time = 74.7220680714
+
+
+n_bin = 3
+b_size = 32
+b_stride = 16
+c_size = 16
+single HoG size = 588
+Failure = 36
+Total = 960
+Percentage = 3
+Elapsed Time = 78.7948899269
+
+
+n_bin = 3
+b_size = 32
+b_stride = 32
+c_size = 16
+single HoG size = 192
+Failure = 55
+Total = 960
+Percentage = 5
+Elapsed Time = 40.9128448963
+
+
+n_bin = 3
+b_size = 64
+b_stride = 32
+c_size = 32
+single HoG size = 108
+Failure = 35
+Total = 960
+Percentage = 3
+Elapsed Time = 49.6803779602
+
+
+n_bin = 3
+b_size = 64
+b_stride = 64
+c_size = 32
+single HoG size = 48
+Failure = 141
+Total = 960
+Percentage = 14
+Elapsed Time = 39.4122390747
+
+
+n_bin = 3
+b_size = 128
+b_stride = 64
+c_size = 64
+single HoG size = 12
+Failure = 453
+Total = 960
+Percentage = 47
+Elapsed Time = 72.750095129
+
+
+n_bin = 3
+b_size = 128
+b_stride = 128
+c_size = 64
+single HoG size = 12
+Failure = 487
+Total = 960
+Percentage = 50
+Elapsed Time = 56.0022480488
+
+

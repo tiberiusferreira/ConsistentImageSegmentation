@@ -9,27 +9,26 @@ from sensor_msgs.msg import Image
 from robot_interaction_experiment.msg import Vision_Features
 from robot_interaction_experiment.msg import Detected_Object
 from robot_interaction_experiment.msg import Detected_Objects_List
-import ImgAveraging
+from robot_interaction_experiment.msg import Audition_Features
 from sklearn.linear_model import SGDClassifier
 from sklearn.neighbors import KNeighborsClassifier
 import joblib
 import os
 import cv2
 import pickle
+import Queue
 import random
 import time
 import bufferImageMsg
 from skimage.feature import hog
-from sys import getsizeof
 import pylab as Plot
 import tsne
 
 ####################
-# Constants max HoG size = 900       #
+# Constants max HoG size = 900  #
 ####################
 
 NB_MSG_MAX = 50
-NB_MAX_DEPTH_IMG = 30
 MAIN_WINDOW_NAME = "Segmentator"
 MIN_AREA = 9000  # minimal area to consider a desirable object
 MAX_AREA = 15000  # maximal area to consider a desirable object
@@ -37,7 +36,6 @@ N_COLORS = 80  # number of colors to consider when creating the image descriptor
 IMG_DEPTH_MAX = 100  # maximum number of depth images to cache
 clr_img_buffer = bufferImageMsg.BufferImageMsg(NB_MSG_MAX)
 depth_img_buffer = bufferImageMsg.BufferImageMsg(1)
-depth_img_avgr = ImgAveraging.ImgAveraging(NB_MAX_DEPTH_IMG)
 LRN_PATH = 'LRN_IMGS/'
 TST_PATH = 'TST_IMGS/'
 TST_PATH_UPRIGHT = 'TST_UPRIGHT/'
@@ -46,7 +44,7 @@ TST_PATH_UPRIGHT = 'TST_UPRIGHT/'
 # Global variables #
 ####################
 
-nb_depth_imgs_cache = 30  # default number of depth images to consider
+nb_depth_imgs_cache = 5  # default number of depth images to consider
 show_depth = False
 show_color = False
 val_depth_capture = 0.03
@@ -87,8 +85,14 @@ clf = SGDClassifier(loss='log')
 implements_p_fit = 1
 live_lrn_timer = 0
 nb_real_additional_classes = 0
-nb_reserved_classes = 10
+nb_reserved_classes = 20
 loaded_clf = 0
+speech = ''
+got_speech = 0
+img_buffer = list()
+stored_imgs = Queue.LifoQueue(60)
+new_rgb = 0
+timer_str = 0
 
 
 def save_imgs_learn(value):
@@ -175,6 +179,11 @@ def clean(img, n):
 
 
 def callback_depth(msg):
+    global new_rgb
+    if new_rgb == 1:
+        new_rgb = 0
+    else:
+        return
     # treating the image containing the depth data
     global depth_img_index, last_depth_imgs, depth_img_avg, got_depth
     # getting the image
@@ -206,6 +215,8 @@ def callback_depth(msg):
 
 
 def callback_rgb(msg):
+    global new_rgb
+    new_rgb = 1
     # processing of the color image
     global img_bgr8_clean, got_color
     # getting image
@@ -225,6 +236,41 @@ def callback_rgb(msg):
         cv2.destroyWindow("couleur")
 
 
+'''
+Callback from the audio related topic. Receives the current dictionary, words histogram and last spoken words (speech).
+'''
+
+
+def callback_audio_recognition(words):
+    global speech
+    global got_speech
+    if not words.complete_words:
+        return
+    speech = words.complete_words
+    got_speech = 1
+
+
+def str_img(img):
+    global timer_str
+    print ("Storing " + str(stored_imgs.qsize()) + ' ' + str(time.time()))
+    if (time.time()-timer_str) > 0.3:
+        print ("Cleaning queue")
+        while not stored_imgs.empty():
+            stored_imgs.get()
+    timer_str = time.time()
+    if stored_imgs.full():
+        stored_imgs.get()
+    stored_imgs.put(img)
+
+
+def check_str_imgs(value):
+    i = 0
+    while not stored_imgs.empty():
+        i += 1
+        cv2.imshow('Img' + str(i), stored_imgs.get())
+        cv2.waitKey(300)
+
+
 def get_cube_upright():
     # Uses the depth image to only take the part of the image corresponding to the closest point and a bit further
     global depth_img_avg
@@ -238,36 +284,39 @@ def get_cube_upright():
     # convert to 8-bit
     mask = np.array(mask, dtype=np.uint8)
     im2, contours, hierarchy = cv2.findContours(mask, 1, 2, offset=(0, -6))
-    biggest_cont = contours[0]
-    for cnt in contours:
-        if cv2.contourArea(cnt) > cv2.contourArea(biggest_cont):
-            biggest_cont = cnt
-    min_area_rect = cv2.minAreaRect(biggest_cont)  # minimum area rectangle that encloses the contour cnt
-    (center, size, angle) = cv2.minAreaRect(biggest_cont)
-    points = cv2.boxPoints(min_area_rect)  # Find four vertices of rectangle from above rect
-    points = np.int32(np.around(points))  # Round the values and make it integers
+    useful_cnts = list()
+    uprightrects = list()
     img_bgr8_clean_copy = img_bgr8_clean.copy()
-    cv2.drawContours(img_bgr8_clean_copy, [points], 0, (0, 0, 255), 2)
-    cv2.drawContours(img_bgr8_clean_copy, biggest_cont, -1, (255, 0, 255), 2)
+    for cnt in contours:
+        if 9000 < cv2.contourArea(cnt) < 15000:
+            useful_cnts.append(cnt)
+    for index, cnts in enumerate(useful_cnts):
+        min_area_rect = cv2.minAreaRect(cnts)  # minimum area rectangle that encloses the contour cnt
+        (center, size, angle) = cv2.minAreaRect(cnts)
+        points = cv2.boxPoints(min_area_rect)  # Find four vertices of rectangle from above rect
+        points = np.int32(np.around(points))  # Round the values and make it integers
+        cv2.drawContours(img_bgr8_clean_copy, [points], 0, (0, 0, 255), 2)
+        cv2.drawContours(img_bgr8_clean_copy, cnts, -1, (255, 0, 255), 2)
+        cv2.waitKey(1)
+        # if we rotate more than 90 degrees, the width becomes height and vice-versa
+        if angle < -45.0:
+            angle += 90.0
+            width, height = size[0], size[1]
+            size = (height, width)
+        rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        # rotate the entire image around the center of the parking cell by the
+        # angle of the rotated rect
+        imgwidth, imgheight = (img_bgr8_clean.shape[0], img_bgr8_clean.shape[1])
+        rotated = cv2.warpAffine(img_bgr8_clean, rot_matrix, (imgheight, imgwidth), flags=cv2.INTER_CUBIC)
+        # extract the rect after rotation has been done
+        sizeint = (np.int32(size[0]), np.int32(size[1]))
+        uprightrect = cv2.getRectSubPix(rotated, sizeint, center)
+        uprightrects.append(uprightrect)
+        uprightrect_copy = uprightrect.copy()
+        cv2.drawContours(uprightrect_copy, [points], 0, (0, 0, 255), 2)
+        cv2.imshow('uprightRect ' + str(index), uprightrect_copy)
     cv2.imshow('RBG', img_bgr8_clean_copy)
-    cv2.waitKey(1)
-    # if we rotate more than 90 degrees, the width becomes height and vice-versa
-    if angle < -45.0:
-        angle += 90.0
-        width, height = size[0], size[1]
-        size = (height, width)
-    rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-    # rotate the entire image around the center of the parking cell by the
-    # angle of the rotated rect
-    imgwidth, imgheight = (img_bgr8_clean.shape[0], img_bgr8_clean.shape[1])
-    rotated = cv2.warpAffine(img_bgr8_clean, rot_matrix, (imgheight, imgwidth), flags=cv2.INTER_CUBIC)
-    # extract the rect after rotation has been done
-    sizeint = (np.int32(size[0]), np.int32(size[1]))
-    uprightrect = cv2.getRectSubPix(rotated, sizeint, center)
-    uprightrect_copy = uprightrect.copy()
-    cv2.drawContours(uprightrect_copy, [points], 0, (0, 0, 255), 2)
-    cv2.imshow('uprightRect', uprightrect_copy)
-    objects_detector(uprightrect)
+    objects_detector(uprightrects)
 
 
 def hog_pred(value):
@@ -291,6 +340,8 @@ def load_hog(value):
     global clf
     global hog_list
     global labels
+    global shuffled_x
+    global shuffled_y
     try:
         f = open('HOG_N_LABELS/HOG_N_LABELS.pickle')
         hog_tuple = pickle.load(f)
@@ -302,6 +353,10 @@ def load_hog(value):
     global loaded
     loaded = 1
     print('Loaded')
+    database_indexs = range(len(labels))
+    random.shuffle(database_indexs)
+    shuffled_x = [hog_list[i] for i in database_indexs]
+    shuffled_y = [labels[i] for i in database_indexs]
     return 1
 
 
@@ -346,7 +401,7 @@ def learn(value):
     lrn_start_time = time.time()
     classes = np.unique(labels).tolist()
     if implements_p_fit == 1:
-        for i in range(100):
+        for i in range(nb_reserved_classes):
             classes.append('new' + str(i))
     print(classes)
     database_indexs = range(len(labels))
@@ -374,7 +429,7 @@ def save_hog(value):
     global clf
     hog_tuple = (hog_list, labels)
     print('labels = ' + str(np.unique(hog_tuple[1])))
-    with open('HOG_N_labels/HOG_N_labels.pickle', 'w') as f:
+    with open('HOG_N_LABELS/HOG_N_LABELS.pickle', 'w') as f:
         pickle.dump(hog_tuple, f)
     print('Done')
 
@@ -412,6 +467,51 @@ def hog_info(value):
     print(len(hog_list[0]))
 
 
+def learn_from_str(value):
+    global live
+    global live_cnt
+    global live_lrn_timer
+    global nb_depth_imgs_cache
+    global hog_list
+    global labels
+    global nb_real_additional_classes
+    global shuffled_x
+    global shuffled_y
+    global hog_size
+    global clf
+    live = 1
+    hog_list = list()
+    labels = list()
+    i = 0
+    while not stored_imgs.empty():
+        i += 1
+        print (i)
+        print (stored_imgs.qsize())
+        img_bgr8 = stored_imgs.get()
+        cv2.imshow('Img' + str(i), img_bgr8)
+        cv2.waitKey(1)
+        learn_hog(img_bgr8)
+    print(stored_imgs.qsize())
+    hog_size = len(shuffled_y)
+    hog_list.extend(
+        shuffled_x[1:int((i/60.0)*hog_size)])
+    labels.extend(
+        shuffled_y[1:int((i/60.0)*hog_size)])
+    shuffledrange = range(len(hog_list))
+    for passes in range(5):
+        random.shuffle(shuffledrange)
+        shuffledx_temp = [hog_list[i] for i in shuffledrange]
+        shuffledy_temp = [labels[i] for i in shuffledrange]
+        start_time = time.time()
+        clf.partial_fit(shuffledx_temp, shuffledy_temp)
+        print('Elapsed Time LEARNING = ' + str(time.time() - start_time) + '\n')
+    live = 0
+    nb_depth_imgs_cache = 5
+    print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
+    live = 0
+    return
+
+
 def live_learn(value):
     global live
     global live_cnt
@@ -446,7 +546,7 @@ def live_learn(value):
     else:
         img_bgr8 = value
         if live_cnt == 0:
-            live_cnt = 100
+            live_cnt = 15
             nb_depth_imgs_cache = 1
             hog_list = list()
             labels = list()
@@ -468,20 +568,30 @@ def live_learn(value):
                 clf.partial_fit(shuffledx_temp, shuffledy_temp)
                 print('Elapsed Time LEARNING = ' + str(time.time() - start_time) + '\n')
             live = 0
-            nb_depth_imgs_cache = 30
+            nb_depth_imgs_cache = 5
             print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
 
 
-def show_img_to_be_sent(img):
-    img_rotation = get_img_rot(img)
+def get_img_to_be_sent(img):
+    global hog_size
+    hog_size = len(labels)
+    if hog_size < 10:
+        print("HoGs not yet loaded")
+        print("Trying to load it")
+        load_hog(1)
+    if loaded_clf == 0:
+        print("Classifier not fitted, trying to load one")
+        if load_classifier(1) == -1:
+            print("Could not load it, quitting")
+    img_rotation, confiance = get_img_rot(img)
     if not img_rotation == 0:
         rows, cols, d = img.shape
         m = cv2.getRotationMatrix2D((cols / 2, rows / 2), img_rotation * 90, 1)
         img = cv2.warpAffine(img, m, (cols, rows))
-    cv2.imshow('Sent', cv2.resize(img, (256, 256)))
+    return cv2.resize(img, (256, 256)), confiance
 
 
-def objects_detector(img_bgr8):
+def objects_detector(imgs_bgr8):
     global img_clean_gray_class
     global img_clean_bgr_learn
     global clf
@@ -493,40 +603,61 @@ def objects_detector(img_bgr8):
     global saving_test
     global live
     global show
+    global got_speech
+    global speech
+    global loaded_clf
     detected_objects_list = []
     objects_detector_time = time.time()
-    width, height, d = np.shape(img_bgr8)
-    if width > 130 or height > 130:
+    for index, img_bgr8 in enumerate(imgs_bgr8):
+        width, height, d = np.shape(img_bgr8)
+        w, l, d = np.shape(img_bgr8)
+        img_clean_bgr_learn = img_bgr8[2:w - 2, 2:l - 2].copy()
+        img_bgr8 = img_bgr8[13:w - 5, 13:l - 8]
+        img_clean_bgr_class = img_bgr8.copy()
+        img_clean_bgr_class = cv2.resize(img_clean_bgr_class, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
+        img_clean_gray_class = cv2.cvtColor(img_clean_bgr_class, cv2.COLOR_BGR2GRAY)
+        cv2.imshow('Clean' + str(index), img_clean_bgr_class)
+        if loaded_clf:
+            final, confiance = get_img_to_be_sent(img_clean_bgr_class)
+            if confiance < 0.85:
+                print ("storing " + str(confiance))
+                str_img(img_bgr8)
+        if saving_learn == 1:
+            save_imgs_learn(img_clean_bgr_learn)
+        if saving_test == 1:
+            save_imgs_test(img_clean_bgr_class)
+        if live == 1:
+            live_learn(img_bgr8)
+        if show:
+            if loaded_clf == 0:
+                print("Classifier not fitted, trying to load one")
+                if load_classifier(1) == -1:
+                    print("Could not load it, quitting")
+                    pass
+            else:
+                cv2.imshow('Sent' + str(index), final)
+        if got_speech == 0:
+            pass
+        else:
+            if confiance < 0.7:
+                learn_from_str()
+        rows, cols, d = img_clean_bgr_class.shape
+        detected_object = Detected_Object()
+        detected_object.id = 1
+        detected_object.image = CvBridge().cv2_to_imgmsg(img_clean_bgr_class, encoding="passthrough")
+        detected_object.center_x = rows / 2
+        detected_object.center_y = cols / 2
+        detected_object.features.hog_histogram = get_img_hog(img_clean_bgr_class)[0]
+        colors_histo, object_shape = getpixelfeatures(img_clean_bgr_class)
+        detected_object.features.colors_histogram = colors_histo.tolist()
+        detected_object.features.shape_histogram = object_shape.tolist()
+        detected_objects_list.append(detected_object)
+    if got_speech == 0:
         return
-    if width < 100 or height < 100:
-        return
-    w, l, d = np.shape(img_bgr8)
-    img_clean_bgr_learn = img_bgr8[2:w - 2, 2:l - 2].copy()
-    img_bgr8 = img_bgr8[13:w - 5, 13:l - 8]
-    img_clean_bgr_class = img_bgr8.copy()
-    img_clean_bgr_class = cv2.resize(img_clean_bgr_class, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
-    img_clean_gray_class = cv2.cvtColor(img_clean_bgr_class, cv2.COLOR_BGR2GRAY)
-    cv2.imshow('Clean', img_clean_bgr_class)
-    if saving_learn == 1:
-        save_imgs_learn(img_clean_bgr_learn)
-    if saving_test == 1:
-        save_imgs_test(img_clean_bgr_class)
-    if live == 1:
-        live_learn(img_bgr8)
-    if show:
-        show_img_to_be_sent(img_clean_bgr_class)
-    rows, cols, d = img_clean_bgr_class.shape
-    detected_object = Detected_Object()
-    detected_object.id = 1
-    detected_object.image = CvBridge().cv2_to_imgmsg(img_clean_bgr_class, encoding="passthrough")
-    detected_object.center_x = rows / 2  # proportion de la largeur
-    detected_object.center_y = cols / 2  # proportion de la largeur aussi
-    detected_object.features.colors_histogram = getpixelfeatures(img_clean_bgr_class)
-    detected_object.features.hog_histogram = get_img_hog(img_clean_bgr_class)[0]
-    detected_objects_list.append(detected_object)
     detected_objects_list_msg = Detected_Objects_List()
     detected_objects_list_msg.detected_objects_list = detected_objects_list
     detected_objects_list_publisher.publish(detected_objects_list_msg)
+    got_speech = 0
 
 
 def get_img_rot(img_bgr):
@@ -538,10 +669,10 @@ def get_img_rot(img_bgr):
             if percentage > best_perc:
                 best_perc = percentage
                 best_rot = i
-        rows, cols = img_bgr.shape
+        rows, cols, d = img_bgr.shape
         m = cv2.getRotationMatrix2D((cols / 2, rows / 2), 90, 1)
         img_bgr = cv2.warpAffine(img_bgr, m, (cols, rows))
-    return best_rot
+    return best_rot, best_perc
 
 
 def get_img_hog(img_bgr):
@@ -579,7 +710,7 @@ def learn_hog(img):
             img_list.append((img[:w - i, i:l - i]))  # cut up and down and right
             img_list.append((img[i:w - i, i:l - i]))  # cut up and down and left and right
     else:
-        for i in range(3, 12, 3):
+        for i in range(1, 12, 2):
             img_list.append((img[0:w - i, :]))  # cut right
             img_list.append((img[i:, :]))  # cut left
             img_list.append((img[:, i:]))  # cut up
@@ -628,9 +759,15 @@ def test_from_disk(value):
         rotation = int(filename.rsplit('_', 3)[1])
         image = cv2.imread(TST_PATH + filename)
         image = cv2.resize(image, (128, 128))
-        found_rot = get_img_rot(image)
+        found_rot, confiance = get_img_rot(image)
+        if confiance < 0.9:
+            print (confiance)
+            cv2.imshow('unsure', image)
+            cv2.waitKey(1000)
         if not abs(rotation - found_rot) < 0.5:
             failure += 1
+            cv2.imshow('MISTAKE', image)
+            cv2.waitKey(1000)
         if (total % 20) == 0:
             print('Elapsed Time Testing Image ' + str(total) + ' = ' + str(time.time() - start_time) + '\n')
     tst_dsk_percentage = 100 * failure / total
@@ -708,9 +845,9 @@ def big_test(value):
     global clf
     for bin_ in range(16, 2, -1):
         for block in (32, 64, 128):
-            for stride in (1, 2, 4):
+            for stride in (1, 2, 4, 8):
                 cell = block / 2
-                b_stride = cell * stride
+                b_stride = cell / stride
                 start_time = time.time()
                 n_bin = bin_
                 b_size = block
@@ -737,10 +874,11 @@ def big_test(value):
                 print('Written')
                 print('Elapsed Time = ' + str(time.time() - start_time) + '\n')
                 clf = SGDClassifier(loss='log')
-print('Big Test Done')
+    print('Big Test Done')
 
 
 def getpixelfeatures(object_img_bgr8):
+    object_img_bgr8 = cv2.resize(object_img_bgr8, (30,30))
     object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
     # gets the color histogram divided in N_COLORS "categories" with range 0-179
     colors_histo, histo_bins = np.histogram(object_img_hsv[:, :, 0], bins=N_COLORS, range=(0, 179))
@@ -762,7 +900,7 @@ def getpixelfeatures(object_img_bgr8):
     features = Vision_Features()
     # features.colors_histogram = colors_histo
     # features.shape_histogram = object_shape
-    return colors_histo
+    return colors_histo, object_shape
 
 
 if __name__ == '__main__':
@@ -784,8 +922,9 @@ if __name__ == '__main__':
     cv2.createTrackbar('Load HoG', MAIN_WINDOW_NAME, 0, 1, load_hog)
     cv2.createTrackbar('Save Classifier', MAIN_WINDOW_NAME, 0, 1, save_classifier)
     cv2.createTrackbar('Load Classifier', MAIN_WINDOW_NAME, 0, 1, load_classifier)
+    cv2.createTrackbar('Check Queue', MAIN_WINDOW_NAME, 0, 1, check_str_imgs)
     cv2.createTrackbar('Plot Classes as 2D', MAIN_WINDOW_NAME, 0, 1, plot_2d_classes)
-    cv2.createTrackbar('Live Learn', MAIN_WINDOW_NAME, 0, 1, live_learn)
+    cv2.createTrackbar('Live Learn', MAIN_WINDOW_NAME, 0, 1, learn_from_str)
     cv2.createTrackbar('Debug', MAIN_WINDOW_NAME, 0, 1, debug)
     cv2.createTrackbar('Predict HoG', MAIN_WINDOW_NAME, 0, 1, hog_pred)
     cv2.createTrackbar("Depth Capture Range", MAIN_WINDOW_NAME, int(100 * val_depth_capture), 150, changecapture)
@@ -795,6 +934,7 @@ if __name__ == '__main__':
     image_sub_rgb = rospy.Subscriber("/camera/rgb/image_rect_color", Image, callback_rgb, queue_size=1)
     image_sub_depth = rospy.Subscriber("/camera/depth_registered/image_raw/", Image, callback_depth, queue_size=1)
     detected_objects_list_publisher = rospy.Publisher('detected_objects_list', Detected_Objects_List, queue_size=1)
+    object_sub = rospy.Subscriber("audition_features", Audition_Features, callback_audio_recognition)
     print("Spinning ROS")
     clr_img_buffer.set_subscriber("/camera/rgb/image_rect_color")
     depth_img_buffer.set_subscriber("/camera/depth_registered/image_raw")
