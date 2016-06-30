@@ -179,7 +179,10 @@ def filter_by_depth():
     uprightrect = cv2.getRectSubPix(rotated, sizeint, center)
     uprightrect_copy = uprightrect.copy()
     cv2.drawContours(uprightrect_copy, [points], 0, (0, 0, 255), 2)
-    cv2.imshow('uprightRect', uprightrect_copy)
+    resized = cv2.resize(uprightrect_copy, (256, 256))
+
+    cv2.imshow('uprightRect', resized)
+
 
     objects_detector(uprightrect, 0)
 
@@ -195,7 +198,7 @@ def objects_detector(img_bgr8, i):
     hh = 255
     hl = 0
     sh = 255
-    sl = 50  # filter the white color background
+    sl = 100  # filter the white color background
     vh = 255
     vl = 0  # to ignore the black in the background
     lowerbound = np.array([hl, sl, vl], np.uint8)
@@ -203,13 +206,21 @@ def objects_detector(img_bgr8, i):
     # filter the image to generate the mask
     filtered_hsv = cv2.inRange(hsv, lowerbound, upperbound)
     filtered_hsv = cv2.bitwise_and(hsv, hsv, mask=filtered_hsv)
-    cv2.imshow('Filtered', filtered_hsv)
+    filtered_hsv_s = cv2.resize(filtered_hsv, (256, 256))
+
+    cv2.imshow('Filtered', filtered_hsv_s)
     cv2.waitKey(1)
     # convert the image to grayscale in order to find contours
     img_bgr = cv2.cvtColor(filtered_hsv, cv2.COLOR_HSV2BGR)
     img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    kernel = np.ones((3, 3), np.uint8)
+    img_gray_af = cv2.dilate(img_gray.copy(), kernel, iterations=1)
     # ret, img_gray = cv2.threshold(img_gray, 50, 255, cv2.THRESH_BINARY)
-    cv2.imshow('Filtered grayscale', img_gray)
+    img_gray_s = cv2.resize(img_gray, (256, 256))
+    img_gray_bf = cv2.resize(img_gray_af, (256, 256))
+    cv2.imshow('FIlGRAY', img_gray_bf)
+    img_gray = img_gray_af
+    cv2.imshow('Filtered grayscale', img_gray_s)
     cv2.waitKey(1)
     maxx = 0
     img_gray_copy = img_gray.copy()
@@ -281,7 +292,10 @@ def objects_detector(img_bgr8, i):
     # cnt = cv2.approxPolyDP(cnt, epsilon, True)
     height, width, channels = img_bgr8_copy.shape
     contour_img = img_bgr8_copy.copy()
+    contour_img_clean = img_bgr8_copy.copy()
     cv2.drawContours(contour_img, cnt, -1, (0, 255, 0), 3)
+    cv2.drawContours(contour_img_clean, cnt, -1, (0, 255, 0), 3)
+
     points = cv2.minEnclosingTriangle(hull)
     # print points
     points00 = points[1][0][0][0]
@@ -454,13 +468,14 @@ def objects_detector(img_bgr8, i):
     # cv2.drawContours(contour_img,hull,-1,(255,0,0))
     cv2.polylines(contour_img, np.int32([hull]), True, 255)
     # cv2.polylines(contour_img, np.int32([points[1]]), True, 255)
-    contour_img = cv2.copyMakeBorder(contour_img, 30, 30, 30, 30, cv2.BORDER_CONSTANT)
     # average_points += 30
+    contour_img = cv2.copyMakeBorder(contour_img, 30, 30, 30, 30, cv2.BORDER_CONSTANT)
+
     cv2.drawContours(contour_img, np.int32([point_zica]), -1, (0,255,0), offset=(30,30))
     cv2.drawContours(contour_img, np.int32([points[1]]), -1, (255,0,0), offset=(30,30))
     cv2.drawContours(contour_img, np.int32([average_points]), -1, (0,0,255), offset=(30,30))
 
-    cv2.imshow('HULL', contour_img)
+    # cv2.imshow('HULL', contour_img)
     # Mom = cv2.moments(hull)
     # cx = int(Mom['m10'] / Mom['m00'])
     # cy = int(Mom['m01'] / Mom['m00'])
@@ -479,11 +494,14 @@ def objects_detector(img_bgr8, i):
     # cv2.rectangle(contour_img_box, (x, y), (x + width, y + height), (0, 255, 0), 2)
     # cv2.drawContours(contour_img, [box], 0, (0, 0, 255), 2)
     # cv2.drawContours(contour_img, [box2], 0, (0, 0, 255), 2)
-    cv2.imshow('Contour', contour_img_box)
+    resized_cnt = cv2.resize(contour_img_box, (256, 256))
+    cv2.imshow('Contour', resized_cnt)
     cv2.waitKey(1)
     cropped_bgr8 = img_bgr8_copy[y:y + height, x:x + width]
-    contour_img_cropped = contour_img[y:y + height, x:x + width]
-    cv2.imshow('zica', cropped_bgr8)
+    contour_img_cropped = contour_img
+    resized_cnt = cv2.resize(cropped_bgr8, (256, 256))
+
+    cv2.imshow('zica', resized_cnt)
     # if height > 1.2*width:
     #     rotmat = cv2.getRotationMatrix2D((height / 2.0, width / 2.0), 90, 1.0)
     #     roi = cv2.warpAffine(roi, rotmat, (height, width), flags=cv2.INTER_LINEAR)  # INTER_CUBIC
@@ -493,7 +511,9 @@ def objects_detector(img_bgr8, i):
     b_size = 2  # block size
     c_size = 2  # cell size
     cropped_gray = cv2.cvtColor(cropped_bgr8, cv2.COLOR_BGR2GRAY)
-    cv2.imshow('CropGray', cropped_gray)
+    resized_cnt = cv2.resize(cropped_gray, (256, 256))
+
+    cv2.imshow('CropGray', resized_cnt)
     fd, hog_image = hog(cropped_gray, orientations=n_bin, pixels_per_cell=(c_size, c_size),
                         cells_per_block=(b_size / c_size, b_size / c_size), visualise=True)
     hog_image = exposure.rescale_intensity(hog_image, in_range=(0, 4))
@@ -511,13 +531,22 @@ def objects_detector(img_bgr8, i):
     # righty = int(((cols - x) * vy / vx) + y)
     # cv2.line(contour_img_cropped, (cols - 1, righty), (0, lefty), (0, 255, 0), 2)
     height, width = cropped_gray.shape
-    cv2.imshow('CropGray', cropped_gray)
+    cropped_gray = cv2.copyMakeBorder(cropped_gray, 30, 30, 30, 30, cv2.BORDER_CONSTANT)
+    resized_cnt = cv2.resize(cropped_gray, (256, 256))
+
+    cv2.imshow('CropGray', resized_cnt)
     # cropped_gray_thres = np.where(cropped_gray > 170, cropped_gray, 0)
     # cv2.imshow('CropThre',cropped_gray_thres)
     # print blank
-    cv2.imshow('AAA', contour_img_cropped)
+    resized_cnt = cv2.resize(contour_img_cropped, (256, 256))
+
+    cv2.imshow('AAA', resized_cnt)
     contour_img_cropped = np.where(contour_img_cropped[:, :, 1] == 255, contour_img_cropped[:, :, 1], 0)
-    cv2.imshow('BBBB', contour_img_cropped)
+
+    contour_img_cropped = np.where(contour_img_clean[:, :, 1] == 255, contour_img_clean[:, :, 1], 0)
+    resized_cnt = cv2.resize(contour_img_cropped, (256, 256))
+
+    cv2.imshow('BBBB', resized_cnt)
     sum1 = list()
     sum1.append(contour_img_cropped[0:height / 2, 0:width / 2])
     sum1.append(contour_img_cropped[height / 2:height, 0:width / 2])

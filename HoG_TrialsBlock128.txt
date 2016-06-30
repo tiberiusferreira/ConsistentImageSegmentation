@@ -1,0 +1,168 @@
+n_bin = 16
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 256
+Failure = 0
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.400304447408
+Elapsed Time = 9.63050508499
+
+
+n_bin = 15
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 240
+Failure = 0
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.412635785435
+Elapsed Time = 9.52048301697
+
+
+n_bin = 14
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 224
+Failure = 0
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.409165503778
+Elapsed Time = 9.46273899078
+
+
+n_bin = 13
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 208
+Failure = 0
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.416292494227
+Elapsed Time = 9.48165798187
+
+
+n_bin = 12
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 192
+Failure = 0
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.406599106888
+Elapsed Time = 9.5390689373
+
+
+n_bin = 11
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 176
+Failure = 0
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.422615050098
+Elapsed Time = 11.2855858803
+
+
+n_bin = 10
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 160
+Failure = 0
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.400416389262
+Elapsed Time = 10.3673849106
+
+
+n_bin = 9
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 144
+Failure = 3
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.406729949113
+Elapsed Time = 10.7470219135
+
+
+n_bin = 8
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 128
+Failure = 3
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.423931764396
+Elapsed Time = 9.14058589935
+
+
+n_bin = 7
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 112
+Failure = 3
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.34554167057
+Elapsed Time = 9.11680698395
+
+
+n_bin = 6
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 96
+Failure = 4
+Total = 1059
+Percentage = 0
+Lowest Conf = 0.406173197232
+Elapsed Time = 10.4649529457
+
+
+n_bin = 5
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 80
+Failure = 43
+Total = 1059
+Percentage = 3
+Lowest Conf = 0.382054632235
+Elapsed Time = 10.4327218533
+
+
+n_bin = 4
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 64
+Failure = 85
+Total = 1059
+Percentage = 7
+Lowest Conf = 0.334816181801
+Elapsed Time = 8.97716403008
+
+
+n_bin = 3
+b_size = 128
+b_stride = 32
+c_size = 32
+single HoG size = 48
+Failure = 86
+Total = 1059
+Percentage = 6
+Lowest Conf = 0.322140538013
+Elapsed Time = 8.8810710907
+
+

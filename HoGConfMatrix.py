@@ -30,7 +30,6 @@ def callback_rgb(data):
     num_obj = len(det_objects)
     if num_obj > 0:
         last_hog = det_objects[0].features.hog_histogram
-        print len(last_hog)
         try:
             last_img = CvBridge().imgmsg_to_cv2(det_objects[0].image)
         except CvBridgeError, e:

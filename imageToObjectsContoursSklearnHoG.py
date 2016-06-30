@@ -73,6 +73,11 @@ saving_test = 0
 failure = 0
 total = 0
 tst_dsk_percentage = -1
+RECORDING = 0
+SHOW = 0
+SAVING_LEARN = 0
+SAVED = 0
+SAVING_TEST = 0
 def nothing(x):
     pass
 
@@ -315,6 +320,11 @@ def hog_info(value):
 
 
 def objects_detector(img_bgr8):
+    global RECORDING
+    global SHOW
+    global SAVING_LEARN
+    global SAVED
+    global SAVING_TEST
     width, height, d = np.shape(img_bgr8)
     if width > 130 or height > 130:
         return

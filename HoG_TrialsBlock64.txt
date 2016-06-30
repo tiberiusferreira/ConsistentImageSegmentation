@@ -6,8 +6,7 @@ single HoG size = 576
 Failure = 7
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.732826069713
-Elapsed Time = 8.01123213768
+Elapsed Time = 7.95886111259
 
 
 n_bin = 15
@@ -15,11 +14,10 @@ b_size = 64
 b_stride = 32
 c_size = 32
 single HoG size = 540
-Failure = 3
+Failure = 5
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.72791068139
-Elapsed Time = 8.41503500938
+Elapsed Time = 7.81229782104
 
 
 n_bin = 14
@@ -30,8 +28,7 @@ single HoG size = 504
 Failure = 5
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.725097376908
-Elapsed Time = 7.81605911255
+Elapsed Time = 7.85341095924
 
 
 n_bin = 13
@@ -42,8 +39,7 @@ single HoG size = 468
 Failure = 5
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.731278247678
-Elapsed Time = 8.0997838974
+Elapsed Time = 7.5341219902
 
 
 n_bin = 12
@@ -54,8 +50,7 @@ single HoG size = 432
 Failure = 1
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.742289568545
-Elapsed Time = 7.59203696251
+Elapsed Time = 7.48508000374
 
 
 n_bin = 11
@@ -63,11 +58,10 @@ b_size = 64
 b_stride = 32
 c_size = 32
 single HoG size = 396
-Failure = 2
+Failure = 4
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.725480935216
-Elapsed Time = 7.59816884995
+Elapsed Time = 7.44895792007
 
 
 n_bin = 10
@@ -75,11 +69,10 @@ b_size = 64
 b_stride = 32
 c_size = 32
 single HoG size = 360
-Failure = 1
+Failure = 2
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.734277965385
-Elapsed Time = 7.35588097572
+Elapsed Time = 7.26133108139
 
 
 n_bin = 9
@@ -90,8 +83,7 @@ single HoG size = 324
 Failure = 3
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.71524933294
-Elapsed Time = 7.20916509628
+Elapsed Time = 7.31911993027
 
 
 n_bin = 8
@@ -99,11 +91,10 @@ b_size = 64
 b_stride = 32
 c_size = 32
 single HoG size = 288
-Failure = 3
+Failure = 4
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.714445357187
-Elapsed Time = 6.9456820488
+Elapsed Time = 6.97083497047
 
 
 n_bin = 7
@@ -111,11 +102,10 @@ b_size = 64
 b_stride = 32
 c_size = 32
 single HoG size = 252
-Failure = 3
+Failure = 2
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.696720266408
-Elapsed Time = 8.04562592506
+Elapsed Time = 6.85858201981
 
 
 n_bin = 6
@@ -126,8 +116,7 @@ single HoG size = 216
 Failure = 1
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.621768324714
-Elapsed Time = 11.8439779282
+Elapsed Time = 6.71012401581
 
 
 n_bin = 5
@@ -135,11 +124,10 @@ b_size = 64
 b_stride = 32
 c_size = 32
 single HoG size = 180
-Failure = 11
+Failure = 12
 Total = 1059
 Percentage = 0
-Lowest Conf = 0.649391072291
-Elapsed Time = 17.9278829098
+Elapsed Time = 6.62626194954
 
 
 n_bin = 4
@@ -147,11 +135,10 @@ b_size = 64
 b_stride = 32
 c_size = 32
 single HoG size = 144
-Failure = 19
+Failure = 21
 Total = 1059
 Percentage = 1
-Lowest Conf = 0.603201657127
-Elapsed Time = 66.7440171242
+Elapsed Time = 6.48151493073
 
 
 n_bin = 3
@@ -159,10 +146,9 @@ b_size = 64
 b_stride = 32
 c_size = 32
 single HoG size = 108
-Failure = 110
+Failure = 119
 Total = 1059
-Percentage = 9
-Lowest Conf = 0.287669194163
-Elapsed Time = 6.57152199745
+Percentage = 10
+Elapsed Time = 6.33351492882
 
 
