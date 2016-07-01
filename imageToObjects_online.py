@@ -11,6 +11,7 @@ from robot_interaction_experiment.msg import Detected_Object
 from robot_interaction_experiment.msg import Detected_Objects_List
 from robot_interaction_experiment.msg import Audition_Features
 from sklearn.linear_model import SGDClassifier
+from sklearn.ensemble import BaggingClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from collections import Counter
 import joblib
@@ -71,7 +72,7 @@ img_clean_bgr_learn = None
 img_clean_gray_class = None
 saved = 0
 color = ''
-n_bin = 10  # 4 number of orientations for the HoG
+n_bin = 6  # 4 number of orientations for the HoG
 b_size = 64  # 15  block size
 b_stride = 32
 c_size = 32  # 15  cell size
@@ -85,11 +86,13 @@ shuffled_y = list()
 shuffled_x = list()
 live_cnt = 0
 hog_size = 0
-# clf = SGDClassifier(loss='log', random_state=10)
-# clf = KNeighborsClassifier(n_neighbors=5)
-clf = svm.SVC(probability=True)
+division = 50
+# clf = BaggingClassifier(svm.SVC(probability=True), n_estimators=division, max_samples=1.0/30)
+clf = SGDClassifier(loss='log', random_state=10)
+# clf = KNeighborsClassifier(n_neighbors=1000)
+# clf = svm.SVC(probability=True)
 
-implements_p_fit = 0
+implements_p_fit = 1
 live_lrn_timer = 0
 nb_real_additional_classes = 0
 nb_reserved_classes = 20
@@ -439,7 +442,7 @@ def learn(value):
     print(classes)
     database_indexs = range(len(labels))
     if implements_p_fit == 1:
-        for i in range(5):
+        for i in range(3):
             print ("Pass " + str(i) + " of " + "5")
             random.shuffle(database_indexs)
             # scaler = StandardScaler()
@@ -809,10 +812,21 @@ def learn_hog(img):
             img_list.append((img[i:, :]))  # cut left
             img_list.append((img[:, i:]))  # cut up
             img_list.append((img[:, 0:l - i]))  # cut down
-            img_list.append((img[:, i:l - i]))  # cut up and down
+
+            img_list.append((img[:, i:l - i]))  # cut down and up
+            img_list.append((img[i:, 0:l - i]))  # cut down and left
+            img_list.append((img[:w - i, 0:l - i]))  # cut down and right
+
+            img_list.append((img[i:, i:]))  # cut up and left
+            img_list.append((img[:w - i, i:]))  # cut up and right
+
             img_list.append((img[i:w - i, :]))  # cut left and right
+
             img_list.append((img[i:, i:l - i]))  # cut up and down and left
             img_list.append((img[:w - i, i:l - i]))  # cut up and down and right
+            img_list.append((img[i:w - i, 0:l - i]))  # cut left and right and down
+            img_list.append((img[i:w - i, i:]))  # cut left and right and up
+
             img_list.append((img[i:w - i, i:l - i]))  # cut up and down and left and right
     else:
         for i in range(1, 20, 2):
@@ -820,10 +834,21 @@ def learn_hog(img):
             img_list.append((img[i:, :]))  # cut left
             img_list.append((img[:, i:]))  # cut up
             img_list.append((img[:, 0:l - i]))  # cut down
-            img_list.append((img[:, i:l - i]))  # cut up and down
+
+            img_list.append((img[:, i:l - i]))  # cut down and up
+            img_list.append((img[i:, 0:l - i]))  # cut down and left
+            img_list.append((img[:w-i, 0:l - i]))  # cut down and right
+
+            img_list.append((img[i:, i:]))  # cut up and left
+            img_list.append((img[:w-i, i:]))  # cut up and right
+
             img_list.append((img[i:w - i, :]))  # cut left and right
+
             img_list.append((img[i:, i:l - i]))  # cut up and down and left
             img_list.append((img[:w - i, i:l - i]))  # cut up and down and right
+            img_list.append((img[i:w - i, 0:l-i]))  # cut left and right and down
+            img_list.append((img[i:w - i, i:]))  # cut left and right and up
+
             img_list.append((img[i:w - i, i:l - i]))  # cut up and down and left and right
     index = 0
     start_time = time.time()
@@ -964,16 +989,16 @@ def test_from_disk(value):
         found_rot, confiance = get_img_rot(image)
         if confiance < lowest_conf:
             lowest_conf = confiance
-        if confiance < 0.7:
-            print (confiance)
-            cv2.imshow('unsure', image)
-            cv2.waitKey(1000)
+        # if confiance < 0.7:
+        #     print (confiance)
+        #     cv2.imshow('unsure', image)
+        #     cv2.waitKey(1000)
         if not abs(rotation - found_rot) < 0.5:
             failure += 1
             print (confiance)
             # img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             # img = cv2.Canny(image, 40, 100)
-            cv2.imshow('MISTAKE', image)
+            # cv2.imshow('MISTAKE', image)
             # print(clf.predict(get_img_hog(img)))
             # cv2.waitKey(1000)
         if (total % 400) == 0:
@@ -1034,7 +1059,7 @@ def learn_from_disk(value):
         image_read = cv2.imread(LRN_PATH + filename)
         learn_hog(image_read)
         if (i % 200) == 0:
-            print('Elapsed Time Learning Image ' + str(i) + ' = ' + str(time.time() - start_time) + '\n')
+            print('Elapsed Time HoGing Image ' + str(i) + ' = ' + str(time.time() - start_time) + '\n')
         i += 1
     learn(1)
     loaded_clf = 1

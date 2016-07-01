@@ -11,7 +11,6 @@ from robot_interaction_experiment.msg import Detected_Object
 from robot_interaction_experiment.msg import Detected_Objects_List
 import scipy
 from sklearn.linear_model import SGDClassifier
-from sklearn import svm
 from sklearn import neighbors
 from skimage.feature import hog
 from skimage import exposure
