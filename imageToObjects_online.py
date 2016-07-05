@@ -16,7 +16,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from collections import Counter
 import joblib
 from sklearn import svm
-
+from scipy.stats.stats import pearsonr
 import os
 import cv2
 import pickle
@@ -50,10 +50,10 @@ NM_SAMPLES = 50000
 ####################
 
 img_clean_bgr_class = 0
-nb_depth_imgs_cache = 5  # default number of depth images to consider
+nb_depth_imgs_cache = 20  # default number of depth images to consider
 show_depth = False
 show_color = False
-val_depth_capture = 0.03
+val_depth_capture = 0.05
 depth_img_index = 0
 last_depth_imgs = range(IMG_DEPTH_MAX + 1)
 number_last_points = 15
@@ -87,12 +87,13 @@ shuffled_x = list()
 live_cnt = 0
 hog_size = 0
 division = 50
+iterations = 0
 # clf = BaggingClassifier(svm.SVC(probability=True), n_estimators=division, max_samples=1.0/30)
-clf = SGDClassifier(loss='log', random_state=10)
+clf = SGDClassifier(loss='log', random_state=10, shuffle=True)
 # clf = KNeighborsClassifier(n_neighbors=1000)
 # clf = svm.SVC(probability=True)
 
-implements_p_fit = 1
+implements_p_fit = 0
 live_lrn_timer = 0
 nb_real_additional_classes = 0
 nb_reserved_classes = 20
@@ -107,6 +108,9 @@ random.seed(10)
 new_obj_timer = time.time()
 using_VGA = 0
 lowest_conf = 0
+last_upright = list()
+interactions_get_cube = 0
+
 
 def save_imgs_learn(value):
     global label
@@ -209,7 +213,7 @@ def callback_depth(msg):
     cleanimage = clean(img, 255)
     if show_depth:
         # shows the image after processing
-        cv2.imshow("Depth", img)
+        cv2.imshow("Depth", cleanimage)
         cv2.waitKey(1)
     else:
         cv2.destroyWindow("Depth")
@@ -220,9 +224,11 @@ def callback_depth(msg):
         depth_img_index = 0
     # creates an image which is the average of the last ones
     depth_img_avg = np.copy(last_depth_imgs[0])
-    for i in range(0, nb_depth_imgs_cache):
+    for i in range(1, nb_depth_imgs_cache):
         depth_img_avg += last_depth_imgs[i]
     depth_img_avg /= nb_depth_imgs_cache
+    # np.set_printoptions(threshold=np.nan)
+    # print (depth_img_avg[100:200][100:200])
     got_depth = True  # ensures there is an depth image available
     if got_color and got_depth:
         get_cube_upright()
@@ -292,12 +298,15 @@ def get_cube_upright():
     global depth_img_avg
     global img_bgr8_clean
     global using_VGA
+    global last_upright
+    global interactions_get_cube
     closest_pnt = np.amin(depth_img_avg)
     # resize the depth image so it matches the color one
+    depth_img_avg_cp = depth_img_avg.copy()
     if not using_VGA:
-        depth_img_avg = cv2.resize(depth_img_avg, (1280, 960))
+        depth_img_avg_cp = cv2.resize(depth_img_avg_cp, (1280, 960))
     # generate a mask with the closest points
-    img_detection = np.where(depth_img_avg < closest_pnt + val_depth_capture, depth_img_avg, 0)
+    img_detection = np.where(depth_img_avg_cp < closest_pnt + val_depth_capture, depth_img_avg_cp, 0)
     # put all the pixels greater than 0 to 255
     ret, mask = cv2.threshold(img_detection, 0.0, 255, cv2.THRESH_BINARY)
     # convert to 8-bit
@@ -305,24 +314,29 @@ def get_cube_upright():
     im2, contours, hierarchy = cv2.findContours(mask, 1, 2, offset=(0, -6))
     useful_cnts = list()
     uprightrects = list()
+    all_upright = list()
     img_bgr8_clean_copy = img_bgr8_clean.copy()
     for cnt in contours:
         if not using_VGA:
             if 9000 < cv2.contourArea(cnt) < 15000:
-                if 420 < cv2.arcLength(cnt, 1) < 560:
+                if 420 < cv2.arcLength(cnt, 1) < 580:
                     useful_cnts.append(cnt)
                 else:
-                    print("Wrong Lenght 450 < " + str(cv2.arcLength(cnt, 1)) + str(" < 570"))
+                    # print("Wrong Lenght 450 < " + str(cv2.arcLength(cnt, 1)) + str(" < 570"))
+                    continue
             else:
-                print ("Wrong Area: 9000 < " + str(cv2.contourArea(cnt)) + " < 15000")
+                # print ("Wrong Area: 9000 < " + str(cv2.contourArea(cnt)) + " < 15000")
+                continue
         else:
             if 2500 < cv2.contourArea(cnt) < 15000:
                 if 210 < cv2.arcLength(cnt, 1) < 280:
                     useful_cnts.append(cnt)
                 else:
-                    print("Wrong Lenght 450 < " + str(cv2.arcLength(cnt, 1)) + str(" < 570"))
+                    # print("Wrong Lenght 210 < " + str(cv2.arcLength(cnt, 1)) + str(" < 280"))
+                    continue
             else:
-                print("Wrong Area: 9000 < " + str(cv2.contourArea(cnt)) + " < 15000")
+                # print("Wrong Area: 2500 < " + str(cv2.contourArea(cnt)) + " < 15000")
+                continue
     for index, cnts in enumerate(useful_cnts):
         min_area_rect = cv2.minAreaRect(cnts)  # minimum area rectangle that encloses the contour cnt
         (center, size, angle) = cv2.minAreaRect(cnts)
@@ -348,13 +362,26 @@ def get_cube_upright():
         # extract the rect after rotation has been done
         sizeint = (np.int32(size[0]), np.int32(size[1]))
         uprightrect = cv2.getRectSubPix(rotated, sizeint, center)
-        uprightrects.append(uprightrect)
+        uprightrect = cv2.resize(uprightrect, (125, 125))
         uprightrect_copy = uprightrect.copy()
-        cv2.drawContours(uprightrect_copy, [points], 0, (0, 0, 255), 2)
-        cv2.imshow('uprightRect ' + str(index), uprightrect_copy)
-
+        uprightrect_copy = np.reshape(uprightrect_copy, (-1))
+        # for p_upright in last_upright:
+        #     p_upright = np.reshape(p_upright, (-1))
+        #     # print ((pearsonr(p_upright, uprightrect_copy)[0]))
+        #     if (pearsonr(p_upright, uprightrect_copy)[0]) < 0.85:
+        #         continue
+        #     uprightrects.append(uprightrect)
+        #     continue
+        all_upright.append(uprightrect)
+        uprightrects.append(uprightrect)
+        # cv2.drawContours(uprightrect_copy, [points], 0, (0, 0, 255), 2)
+        # cv2.imshow('uprightRect ' + str(index), uprightrect_copy)
+    interactions_get_cube += 1
+    if interactions_get_cube % 5 == 0:
+        last_upright = all_upright
     cv2.imshow('RBG', img_bgr8_clean_copy)
     cv2.waitKey(1)
+    # print (len(uprightrects))
     objects_detector(uprightrects)
 
 
@@ -442,8 +469,8 @@ def learn(value):
     print(classes)
     database_indexs = range(len(labels))
     if implements_p_fit == 1:
-        for i in range(3):
-            print ("Pass " + str(i) + " of " + "5")
+        for i in range(5):
+            print ("Pass " + str(i) + " of " + "4")
             random.shuffle(database_indexs)
             # scaler = StandardScaler()
             shuffled_x = [hog_list[i] for i in database_indexs]
@@ -508,6 +535,7 @@ def hog_info(value):
 
 
 def learn_from_str(value):
+    print ("LIVE LEARNING!!")
     global live
     global live_cnt
     global live_lrn_timer
@@ -521,39 +549,19 @@ def learn_from_str(value):
     global clf
     global NM_SAMPLES
     live = 1
-    hog_list = list()
-    labels = list()
+    # hog_list = list()
+    # labels = list()
     i = 0
     nb_real_additional_classes += 1
     print (stored_imgs.qsize())
     while not stored_imgs.empty():
         i += 1
         img_bgr8 = stored_imgs.get()
+        cv2.imshow("Learning " + str(i),img_bgr8)
         learn_hog(img_bgr8)
-    hog_size = len(shuffled_y)
-    NM_SAMPLES = 5*len(hog_list)
-    hog_list_bf_extend = list(hog_list)
-    labels_bf_extend = list(labels)
-    hog_list.extend(shuffled_x[1:NM_SAMPLES])
-    labels.extend(shuffled_y[1:NM_SAMPLES])
     print (Counter(labels))
-    for passes in range(5):
-        shuffledrange = range(len(hog_list))
-        random.shuffle(shuffledrange)
-        shuffledx_temp = [hog_list[i] for i in shuffledrange]
-        shuffledy_temp = [labels[i] for i in shuffledrange]
-        start_time = time.time()
-        clf.partial_fit(shuffledx_temp, shuffledy_temp)
-        print('Elapsed Time LEARNING = ' + str(time.time() - start_time) + '\n')
-    live = 0
-    nb_depth_imgs_cache = 5
+    learn(1)
     print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
-    shuffled_y.extend(labels_bf_extend)
-    shuffled_x.extend(hog_list_bf_extend)
-    database_indexs = range(len(shuffled_y))
-    random.shuffle(database_indexs)
-    shuffled_y = [shuffled_y[i] for i in database_indexs]
-    shuffled_x = [shuffled_x[i] for i in database_indexs]
     live = 0
     return
 
@@ -699,6 +707,8 @@ def objects_detector(imgs_bgr8):
     global speech
     global loaded_clf
     global using_VGA
+    global iterations
+    iterations += 1
     detected_objects_list = []
     objects_detector_time = time.time()
     for index, img_bgr8 in enumerate(imgs_bgr8):
@@ -719,9 +729,13 @@ def objects_detector(imgs_bgr8):
         cv2.imshow('Clean' + str(index), img_clean_bgr_class)
         if loaded_clf:
             final, confiance = get_img_to_be_sent(img_clean_bgr_class)
+            if iterations % 50 == 0:
+                print (confiance)
             # print("storing " + str(confiance))
-            if confiance < 0.68:
+            if confiance < 0.75:
                 str_img(img_clean_bgr_learn)
+            if stored_imgs.full():
+                learn_from_str(1)
         if saving_learn == 1:
             cv2.imshow('LEARN', img_clean_bgr_learn)
             cv2.waitKey(1000)
@@ -739,11 +753,11 @@ def objects_detector(imgs_bgr8):
                     print("Could not load it, quitting")
             else:
                 cv2.imshow('Sent' + str(index), final)
-        if got_speech == 0:
-            pass
-        else:
-            if confiance < 0.68:
-                learn_from_str(1)
+                cv2.waitKey(10)
+        # if got_speech == 0:
+        #     pass
+        # else:
+
         rows, cols, d = img_clean_bgr_class.shape
         detected_object = Detected_Object()
         detected_object.id = 1
@@ -755,6 +769,7 @@ def objects_detector(imgs_bgr8):
         detected_object.features.colors_histogram = colors_histo.tolist()
         detected_object.features.shape_histogram = object_shape.tolist()
         detected_objects_list.append(detected_object)
+
     # if got_speech == 0:
     #     return
     detected_objects_list_msg = Detected_Objects_List()
@@ -885,8 +900,8 @@ def partial_lrn_disk(value):
     global clf
     live = 1
     i = 0
-    hog_list = list()
-    labels = list()
+    # hog_list = list()
+    # labels = list()
     for filename in os.listdir(PARTIAL_LRN_PATH):
         if (i % 20) == 0:
             start_time = time.time()
@@ -902,14 +917,7 @@ def partial_lrn_disk(value):
             shuffled_x[1:NM_SAMPLES])
     labels.extend(
             shuffled_y[1:NM_SAMPLES])
-    for passes in range(5):
-        shuffledrange = range(len(hog_list))
-        random.shuffle(shuffledrange)
-        shuffledx_temp = [hog_list[i] for i in shuffledrange]
-        shuffledy_temp = [labels[i] for i in shuffledrange]
-        start_time = time.time()
-        clf.partial_fit(shuffledx_temp, shuffledy_temp)
-        print('Elapsed Time LEARNING = ' + str(time.time() - start_time) + '\n')
+    learn(1)
     live = 0
     loaded_clf = 1
     print('Done')
