@@ -700,26 +700,53 @@ def get_img_to_be_sent(img):
 def check_stability(last_objs):
     last_objs_c = copy.copy(last_objs)
     obj_center_list = list()
+    my_center_list = list()
     nb_obj = 0
+    stable = 1
+    sorted_by_first = list()
     for index, obj_snapshot in enumerate(last_objs_c):
         if index == 0:
             nb_obj = len(obj_snapshot)
         else:
             if not nb_obj == len(obj_snapshot):
                 print ("Obj number not stable!")
-                return
-    for obj in range(nb_obj):
-        one_obj_center_hist = list()
-        for index, obj_snapshot in enumerate(last_objs_c):
-            img_bgr8, center = obj_snapshot[obj]
-            one_obj_center_hist.append(center)
-        obj_center_list.append(one_obj_center_hist)
-    for obj in range(nb_obj):
-        x0, y0 = obj_center_list[obj][0]
-        x6, y6 = obj_center_list[obj][6]
-        dist = math.sqrt(abs(x0**2 - x6**2) + abs(y0**2 - y6**2))
+                stable = 0
+                return stable
+    # for index, obj_snapshot in enumerate(last_objs_c):  # for each period of time
+    #     for obj_index, obj_in_sameTime in enumerate(obj_snapshot):
+    #         img_bgr8_list, center_list = obj_in_sameTime    # for each obj in the same period of time
+    #         my_center_list.append(center_list)
+    #     sorted_by_second = sorted(my_center_list, key=lambda tup: tup[1])
+    #     sorted_by_first.append(sorted(sorted_by_second, key=lambda tup: tup[0]))
+    for index, obj_snapshot in enumerate(last_objs_c):  # for each period of time
+        sorted_by_second = sorted(obj_snapshot, key=lambda tup: tup[1][1])
+        sorted_by_first = sorted(obj_snapshot, key=lambda tup: tup[1][0])
+        last_objs_c[index] = sorted_by_first
 
-        print (dist)
+        # print ([x[1] for x in sorted_by_first]
+        # print ('\n')
+            # print (center_list)
+        # print (sorted_by_second)
+    for obj in range(nb_obj):   # for each obj
+        one_obj_center_hist = list()
+        for index, obj_snapshot in enumerate(last_objs_c):  # for each time
+            img_bgr8, center = obj_snapshot[obj]    # get a given obj in time
+            one_obj_center_hist.append(center)      # append always the same obj in all times
+        obj_center_list.append(one_obj_center_hist)
+    # for obj in range(nb_obj):
+        # sorted_by_second = sorted(obj_center_list, key=lambda tup: tup[1])
+        # print (obj_center_list)
+        # print ('\n')
+    for obj in range(nb_obj):
+        for one in range(7):
+            x_one, y_one = obj_center_list[obj][one]
+            for other in range(7):
+                x_other, y_other = obj_center_list[obj][other]
+                dist = math.sqrt(abs(x_one**2 - x_other**2) + abs(y_one**2 - y_other**2))
+                if dist > 100:
+                    stable = 0
+    print ('Stable = ' + str(stable))
+    return stable
     # print (obj_center_list)
     # print ('\n')
 
@@ -754,8 +781,9 @@ def objects_detector(uprightrects_tuples):
     else:
         index_last_obj = iterations % 7
         obj_history[index_last_obj] = uprightrects_tuples
-    check_stability(obj_history)
-
+    if check_stability(obj_history) == 0:
+        return
+    uprightrects_tuples = obj_history[2]
     for index, curr_tuple in enumerate(uprightrects_tuples):
         img_bgr8, center = curr_tuple
         width, height, d = np.shape(img_bgr8)
@@ -1127,6 +1155,7 @@ def learn_from_disk(value):
 def record(value):
     global recording
     recording = 1
+
 
 def complete_lrn_disk(value):
     global label
