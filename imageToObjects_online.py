@@ -51,7 +51,7 @@ NM_SAMPLES = 50000
 ####################
 
 img_clean_bgr_class = 0
-nb_depth_imgs_cache = 20  # default number of depth images to consider
+nb_depth_imgs_cache = 5  # default number of depth images to consider
 show_depth = False
 show_color = False
 val_depth_capture = 0.05
@@ -73,7 +73,7 @@ img_clean_bgr_learn = None
 img_clean_gray_class = None
 saved = 0
 color = ''
-n_bin = 6  # 4 number of orientations for the HoG
+n_bin = 10  # 4 number of orientations for the HoG
 b_size = 64  # 15  block size
 b_stride = 32
 c_size = 32  # 15  cell size
@@ -94,7 +94,6 @@ clf = SGDClassifier(loss='log', random_state=10, shuffle=True)
 # clf = KNeighborsClassifier(n_neighbors=1000)
 # clf = svm.SVC(probability=True)
 recording = 0
-
 implements_p_fit = 0
 live_lrn_timer = 0
 nb_real_additional_classes = 0
@@ -203,10 +202,6 @@ def clean(img, n):
 def callback_depth(msg):
     global new_rgb
     global got_color
-    # if new_rgb == 1:
-    #     new_rgb = 0
-    # else:
-    #     return
     # treating the image containing the depth data
     global depth_img_index, last_depth_imgs, depth_img_avg, got_depth
     # getting the image
@@ -225,15 +220,21 @@ def callback_depth(msg):
     # storing the image
     last_depth_imgs[depth_img_index] = np.copy(cleanimage)
     depth_img_index += 1
-    if depth_img_index > nb_depth_imgs_cache:
-        depth_img_index = 0
     # creates an image which is the average of the last ones
-    depth_img_avg = np.copy(last_depth_imgs[0])
-    for i in range(1, nb_depth_imgs_cache):
+    for i in range(0, depth_img_index):
+        if i == 0:
+            depth_img_avg = last_depth_imgs[0]
         depth_img_avg += last_depth_imgs[i]
-    depth_img_avg /= nb_depth_imgs_cache
+    depth_img_avg /= (depth_img_index+1)
     got_depth = True  # ensures there is an depth image available
+    # print ("Recu Depth")
+    if new_rgb == 1:
+        new_rgb = 0
+    else:
+        return
     if got_color and got_depth:
+        # print ('Nb depth img = ' + str(depth_img_index))
+        depth_img_index = 0
         got_color = False
         get_cube_upright()
 
@@ -353,19 +354,6 @@ def get_cube_upright():
             continue
         points = cv2.boxPoints(min_area_rect)  # Find four vertices of rectangle from above rect
         points = np.int32(np.around(points))  # Round the values and make it integers
-        # rect_list.append(points)
-        # if len(rect_list) == 7:
-        #     for cnt, rec in enumerate(rect_list):
-        #         rect_list[cnt] = np.reshape(rec, (1, -1))[0]
-        #         # print (rec)
-        #     # print (rect_list[0])
-        #     print((pearsonr(rect_list[0], rect_list[6]))[0])
-        #     if (pearsonr(rect_list[0], rect_list[6]))[0] < 0.999:
-        #         rect_list = list()
-        #         send = 0
-        #     rect_list = list()
-        # else:
-        #     send = 0
         cv2.drawContours(img_bgr8_clean_copy, [points], 0, (0, 0, 255), 2)
         cv2.drawContours(img_bgr8_clean_copy, cnts, -1, (255, 0, 255), 2)
         cv2.waitKey(1)
@@ -564,7 +552,8 @@ def learn_from_str(value):
     while not stored_imgs.empty():
         i += 1
         img_bgr8 = stored_imgs.get()
-        cv2.imshow("Learning " + str(i),img_bgr8)
+        cv2.imshow("Learning " + str(i) + str(nb_real_additional_classes), img_bgr8)
+        cv2.waitKey(1)
         learn_hog(img_bgr8)
     print (Counter(labels))
     learn(1)
@@ -709,7 +698,7 @@ def check_stability(last_objs):
             nb_obj = len(obj_snapshot)
         else:
             if not nb_obj == len(obj_snapshot):
-                print ("Obj number not stable!")
+                # print ("Obj number not stable!")
                 stable = 0
                 return stable
     # for index, obj_snapshot in enumerate(last_objs_c):  # for each period of time
@@ -743,12 +732,27 @@ def check_stability(last_objs):
             for other in range(7):
                 x_other, y_other = obj_center_list[obj][other]
                 dist = math.sqrt(abs(x_one**2 - x_other**2) + abs(y_one**2 - y_other**2))
-                if dist > 100:
+                if dist > 200:
                     stable = 0
     print ('Stable = ' + str(stable))
     return stable
     # print (obj_center_list)
     # print ('\n')
+
+
+def learn_tuple(curr_tuple, obj_history):
+    img, center_targ = curr_tuple
+    print (center_targ)
+    indexx = 0
+    for snapshot in (obj_history[0], obj_history[4], obj_history[6]):
+        for objs in snapshot:
+            img, center = objs
+            dist = math.sqrt(abs(center_targ[0] ** 2 - center[0] ** 2) + abs(center_targ[1] ** 2 - center[1] ** 2))
+            if dist < 200:
+                str_img(img)
+                # cv2.imshow('Learn?' + str(indexx), img)
+                # cv2.waitKey(1)
+                # indexx += 1
 
 
 def objects_detector(uprightrects_tuples):
@@ -783,6 +787,10 @@ def objects_detector(uprightrects_tuples):
         obj_history[index_last_obj] = uprightrects_tuples
     if check_stability(obj_history) == 0:
         return
+    # for indexx, snapshots in enumerate(obj_history):
+    #     # print (snapshots[0][0])
+    #     cv2.imshow('Good? ' + str(indexx), snapshots[0][0])
+    #     cv2.waitKey(1)
     uprightrects_tuples = obj_history[2]
     for index, curr_tuple in enumerate(uprightrects_tuples):
         img_bgr8, center = curr_tuple
@@ -805,11 +813,11 @@ def objects_detector(uprightrects_tuples):
             final, confiance = get_img_to_be_sent(img_clean_bgr_class)
             if iterations % 50 == 0:
                 print (confiance)
-            # print("storing " + str(confiance))
-            if confiance < 0.75 and recording:
-                str_img(img_clean_bgr_learn)
-            if stored_imgs.full():
+            if confiance < 0.85 and recording:
+                learn_tuple(curr_tuple, obj_history)
                 learn_from_str(1)
+                final = cv2.resize(img_clean_bgr_class, (256, 256))
+            # print("storing " + str(confiance))
         if saving_learn == 1:
             cv2.imshow('LEARN', img_clean_bgr_learn)
             cv2.waitKey(1000)
