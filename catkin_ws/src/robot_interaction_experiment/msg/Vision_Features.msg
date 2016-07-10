@@ -1,0 +1,3 @@
+float32[] colors_histogram
+float32[] shape_histogram
+float32[] hog_histogram
