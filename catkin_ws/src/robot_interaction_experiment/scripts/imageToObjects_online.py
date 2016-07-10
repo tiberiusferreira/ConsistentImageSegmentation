@@ -94,7 +94,6 @@ clf = SGDClassifier(loss='log', random_state=10, shuffle=True)
 # clf = KNeighborsClassifier(n_neighbors=1000)
 # clf = svm.SVC(probability=True)
 recording = 0
-
 implements_p_fit = 0
 live_lrn_timer = 0
 nb_real_additional_classes = 0
