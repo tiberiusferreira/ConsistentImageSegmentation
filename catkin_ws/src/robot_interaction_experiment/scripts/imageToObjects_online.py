@@ -25,6 +25,7 @@ import pylab as Plot
 import tsne
 import copy
 import math
+import threading
 ####################
 # Constants max HoG size = 900  #
 ####################
@@ -47,7 +48,7 @@ NM_SAMPLES = 50000
 ####################
 
 img_clean_bgr_class = 0
-nb_depth_imgs_cache = 5  # default number of depth images to consider
+nb_depth_imgs_cache = 2  # default number of depth images to consider
 show_depth = False
 show_color = False
 val_depth_capture = 0.05
@@ -114,6 +115,13 @@ last_clr_timestamp = 0
 distance = 0
 x = 0
 y = 0
+refPt = list()
+cropping = False
+rgb_lock = threading.Lock()
+depth_lock = threading.Lock()
+treatment_lock = threading.Lock()
+
+
 
 def save_imgs_learn(value):
     global label
@@ -161,21 +169,21 @@ def save_imgs_test(value):
             print('Done saving')
 
 
-def changecapture(n):
+def depththreshold(n):
     global val_depth_capture
     if n == 0:
         n = 1
     val_depth_capture = float(n) / 100
 
 
-def changeprofondeur(n):
+def change_nb_depth_imgs(n):
     global nb_depth_imgs_cache
     nb_depth_imgs_cache = n
     if nb_depth_imgs_cache <= 0:
         nb_depth_imgs_cache = 1
 
 
-def changeaffprofondeur(b):
+def show_depth_imgs(b):
     global show_depth
     if b == 1:
         show_depth = True
@@ -183,7 +191,7 @@ def changeaffprofondeur(b):
         show_depth = False
 
 
-def changeaffcouleur(b):
+def show_clr_imgs(b):
     global show_color
     if b == 1:
         show_color = True
@@ -200,6 +208,7 @@ def clean(img, n):
 
 
 def callback_depth(msg):
+    depth_lock.acquire()
     global new_rgb
     global depth_timestamp
     # treating the image containing the depth data
@@ -217,39 +226,47 @@ def callback_depth(msg):
         cv2.waitKey(1)
     else:
         cv2.destroyWindow("Depth")
+    if not using_VGA:
+        cleanimage = cv2.resize(cleanimage, (1280, 960))
     # storing the image
     # depth_img_avg = cleanimage
     last_depth_imgs.append(copy.copy(cleanimage))
     depth_img_avg = np.array([sum(e) / len(e) for e in zip(*last_depth_imgs)])
     if len(last_depth_imgs) == 7:
         last_depth_imgs = list()
-    # print (last_depth_imgs)
-
-    # creates an image which is the average of the last ones
-    # depth_img_avg = (last_depth_imgs).mean()
-    # print (depth_img_avg)
-    # for i in range(0, depth_img_index):
-    #     if i == 0:
-    #         depth_img_avg = last_depth_imgs[0]
-    #         continue
-    #     depth_img_avg += last_depth_imgs[i]
-    # depth_img_avg /= (depth_img_index+1)
     depth_img_index += 1
     depth_timestamp = msg.header.stamp
+    depth_lock.release()
+
 
 
 def begin_treatment():
-    global depth_timestamp, clr_timestamp, last_clr_timestamp, depth_img_avg
-    if not depth_timestamp == 0 and not clr_timestamp == 0:
+    treatment_lock.acquire()
+    global depth_timestamp, clr_timestamp, last_clr_timestamp, depth_img_avg, refPt, img_bgr8_clean
+    if not depth_timestamp == 0 and not clr_timestamp == 0 and not clr_timestamp == last_clr_timestamp:
         last_clr_timestamp = clr_timestamp
-        cv2.imshow('depth avg', depth_img_avg)
+        if not len(refPt) == 2:
+            window_name = 'Select Region'
+            cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+            cv2.imshow(window_name, img_bgr8_clean)
+            cv2.setMouseCallback(window_name, click_and_crop)
+            while not len(refPt) == 2:
+                cv2.waitKey(50)
+            cv2.destroyWindow(window_name)
+        print (np.shape(img_bgr8_clean))
+        img_bgr8_clean = img_bgr8_clean[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
+        depth_img_avg = depth_img_avg[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
+        print (np.shape(img_bgr8_clean))
+        print ('\n')
+        # while x == 0 or y == 0:
+        #     cv2.waitKey(1)
+        # cv2.waitKey(0)
         get_cube_upright()
-
-
-    # get_cube_upright()
+        treatment_lock.release()
 
 
 def callback_rgb(msg):
+    rgb_lock.acquire()
     global using_VGA
     global clr_timestamp
     global new_rgb
@@ -271,6 +288,7 @@ def callback_rgb(msg):
         cv2.waitKey(1)
     else:
         cv2.destroyWindow("couleur")
+    rgb_lock.release()
 
 
 '''
@@ -308,12 +326,23 @@ def check_str_imgs(value):
         cv2.waitKey(300)
 
 
-def click_and_crop(event, rx, ry, flags, param):
-    global x, y, depth_img_avg_cp
-    if event == cv2.EVENT_LBUTTONUP:
-        print ('clicked ' + str(depth_img_avg_cp[x, y]))
-        x = rx
-        y = ry
+def click_and_crop(event, x, y, flags, param):
+    # grab references to the global variables
+    global refPt, cropping
+
+    # if the left mouse button was clicked, record the starting
+    # (x, y) coordinates and indicate that cropping is being
+    # performed
+    if event == cv2.EVENT_LBUTTONDOWN:
+        refPt = [(x, y)]
+        cropping = True
+
+    # check to see if the left mouse button was released
+    elif event == cv2.EVENT_LBUTTONUP:
+        # record the ending (x, y) coordinates and indicate that
+        # the cropping operation is finished
+        refPt.append((x, y))
+        cropping = False
 
 
 def get_cube_upright():
@@ -329,15 +358,8 @@ def get_cube_upright():
     img_bgr8_clean_copy = img_bgr8_clean.copy()
     # resize the depth image so it matches the color one
     depth_img_avg_cp = copy.copy(depth_img_avg)
-    if not using_VGA:
-        depth_img_avg_cp = cv2.resize(depth_img_avg_cp, (1280, 960))
     closest_pnt = np.amin(depth_img_avg)
     # print ('from amin = ' + str(closest_pnt))
-    # cv2.imshow('Click on Object', img_bgr8_clean_copy)
-    # cv2.waitKey(1)
-    # cv2.setMouseCallback('Click on Object', click_and_crop)
-    # while x == 0 or y == 0:
-    #     cv2.waitKey(1)
     # closest_pnt = depth_img_avg_cp[x, y]
     # print ( ' From clicked = ' + str(closest_pnt))
     # generate a mask with the closest points
@@ -588,111 +610,6 @@ def learn_from_str(value):
     return
 
 
-def complete_lrn(value):
-    global live
-    global live_cnt
-    global live_lrn_timer
-    global nb_depth_imgs_cache
-    global hog_list
-    global labels
-    global nb_real_additional_classes
-    global shuffled_x
-    global shuffled_y
-    global hog_size
-    global clf
-    global NM_SAMPLES
-    nb_real_additional_classes += 1
-    clf = 0
-    clf = SGDClassifier(loss='log', random_state=10)
-    live = 1
-    # hog_list = list()
-    # labels = list()
-    i = 0
-    print (stored_imgs.qsize())
-    while not stored_imgs.empty():
-        i += 1
-        img_bgr8 = stored_imgs.get()
-        learn_hog(img_bgr8)
-    print (Counter(labels))
-    # for passes in range(5):
-    shuffledrange = range(len(hog_list))
-    random.shuffle(shuffledrange)
-    shuffledx_temp = [hog_list[i] for i in shuffledrange]
-    shuffledy_temp = [labels[i] for i in shuffledrange]
-    start_time = time.time()
-    clf.fit(shuffledx_temp, shuffledy_temp)
-    print('Elapsed Time LEARNING = ' + str(time.time() - start_time) + '\n')
-    nb_depth_imgs_cache = 5
-    print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
-    # shuffled_y.extend(labels_bf_extend)
-    # shuffled_x.extend(hog_list_bf_extend)
-    # database_indexs = range(len(shuffled_y))
-    # random.shuffle(database_indexs)
-    # shuffled_y = [shuffled_y[i] for i in database_indexs]
-    # shuffled_x = [shuffled_x[i] for i in database_indexs]
-    live = 0
-    return
-
-
-def live_learn(value):
-    global live
-    global live_cnt
-    global live_lrn_timer
-    global nb_depth_imgs_cache
-    global hog_list
-    global labels
-    global nb_real_additional_classes
-    global shuffled_x
-    global shuffled_y
-    global hog_size
-    global clf
-    if isinstance(value, int):
-        hog_size = len(labels)
-        if hog_size < 10:
-            print ("HoGs not yet loaded")
-            print ("Trying to load it")
-            load_hog(1)
-        if loaded_clf == 0:
-            print("Classifier not fitted, trying to load one")
-            if load_classifier(1) == -1:
-                print("Could not load it, quitting")
-        hog_size = len(labels)
-        live_lrn_timer = time.time()
-        live = 1
-        nb_real_additional_classes += 1
-        print ("Current HoG size = " + str(hog_size))
-        database_indexs = range(len(labels))
-        random.shuffle(database_indexs)
-        shuffled_x = [hog_list[i] for i in database_indexs]
-        shuffled_y = [labels[i] for i in database_indexs]
-    else:
-        img_bgr8 = value
-        if live_cnt == 0:
-            live_cnt = 100
-            nb_depth_imgs_cache = 1
-            hog_list = list()
-            labels = list()
-        learn_hog(img_bgr8)
-        shuffledrange = range(hog_size)
-        print(live_cnt)
-        live_cnt -= 1
-        if live_cnt == 0:
-            hog_list.extend(shuffled_x[1:(int(hog_size * float(1.0/(len(np.unique(shuffled_y))-nb_reserved_classes + nb_real_additional_classes))))])
-            labels.extend(shuffled_y[1:(int(hog_size * float(1.0/(len(np.unique(shuffled_y))-nb_reserved_classes + nb_real_additional_classes))))])
-            shuffledrange = range(len(hog_list))
-            print ((int(hog_size * float(1.0/(len(np.unique(shuffled_y))-nb_reserved_classes+nb_real_additional_classes)))))
-            print (len(hog_list))
-            for passes in range(5):
-                shuffledx_temp = [hog_list[i] for i in shuffledrange]
-                shuffledy_temp = [labels[i] for i in shuffledrange]
-                start_time = time.time()
-                clf.partial_fit(shuffledx_temp, shuffledy_temp)
-                print('Elapsed Time LEARNING = ' + str(time.time() - start_time) + '\n')
-            live = 0
-            nb_depth_imgs_cache = 5
-            print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
-
-
 def get_img_to_be_sent(img):
     global hog_size
     hog_size = len(labels)
@@ -853,8 +770,6 @@ def objects_detector(uprightrects_tuples):
             cv2.imshow('TEST', img_clean_bgr_class)
             cv2.waitKey(1000)
             save_imgs_test(img_clean_bgr_class)
-        if live == 1:
-            live_learn(img_bgr8)
         if show:
             if loaded_clf == 0:
                 print("Classifier not fitted, trying to load one")
@@ -919,9 +834,6 @@ def get_img_hog(img_bgr):
 
 
 def learn_hog(img):
-    start_time = time.time()
-    # img = cv2.Canny(img, 40, 100)
-
     global n_bin
     global b_size
     global c_size
@@ -979,21 +891,16 @@ def learn_hog(img):
 
             img_list.append((img[i:w - i, i:l - i]))  # cut up and down and left and right
     index = 0
-    start_time = time.time()
     for imgs in img_list:
         imgs = cv2.resize(imgs, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
         index += 1
         h1 = get_img_hog(imgs)
         h1 = h1.reshape(-1, )
         hog_list.append(h1)
-        # print (hog_list)
-        # hog_list.append(hog(imgs, orientations=n_bin, pixels_per_cell=(c_size, c_size),
-        #                     cells_per_block=(b_size / c_size, b_size / c_size), visualise=False))
         if not live == 1:
             labels.append(label)
         else:
             labels.append('new' + str(nb_real_additional_classes))
-    # print ('new' + str(nb_real_additional_classes))
 
 
 def partial_lrn_disk(value):
@@ -1132,41 +1039,6 @@ def test_from_disk(value):
     print('Done')
 
 
-def test_from_disk_label(value):
-    print('Testing from disk')
-    start_time = time.time()
-    global TST_PATH_UPRIGHT
-    global label
-    global rotation
-    global total
-    global tst_dsk_percentage
-    total = 0
-    global failure
-    failure = 0
-    for filename in os.listdir(TST_PATH_UPRIGHT):
-        total += 1
-        if (total % 20) == 0:
-            start_time = time.time()
-        label = filename.rsplit('_', 3)[0]
-        imagee = cv2.imread(TST_PATH_UPRIGHT + filename)
-        imagee = cv2.resize(imagee, (128, 128))
-        opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
-        h1 = opencv_hog.compute(imagee)
-        fd = np.reshape(h1, (len(h1),))
-        fd = fd.reshape(1, -1)
-        found_label = clf.predict(fd)[0]
-        if not str(found_label) == str(label):
-            failure += 1
-            print("Got " + str(found_label))
-            print("Expected " + str(label))
-            print("\n")
-    tst_dsk_percentage = 100 * failure / total
-    print('Failure = ' + str(tst_dsk_percentage) + '%')
-    print('Failures = ' + str(failure))
-    print('Elapsed Time Testing = ' + str(time.time() - start_time) + '\n')
-    print('Done')
-
-
 def learn_from_disk(value):
     global label
     global LRN_PATH
@@ -1190,27 +1062,6 @@ def learn_from_disk(value):
 def record(value):
     global recording
     recording = 1
-
-def complete_lrn_disk(value):
-    global label
-    global LRN_PATH
-    global loaded_clf
-    global clf
-    i = 0
-    for filename in os.listdir(PARTIAL_LRN_PATH):
-        if (i % 20) == 0:
-            start_time = time.time()
-        label = filename.rsplit('_', 2)[0]
-        image_read = cv2.imread(PARTIAL_LRN_PATH + filename)
-        learn_hog(image_read)
-        if (i % 20) == 0:
-            print('Elapsed Time Learning Image ' + str(i) + ' = ' + str(time.time() - start_time) + '\n')
-        i += 1
-    clf = 0
-    clf = SGDClassifier(loss='log', random_state=10)
-    learn(1)
-    loaded_clf = 1
-    print('Done')
 
 
 def big_test(value):
@@ -1302,42 +1153,40 @@ if __name__ == '__main__':
     rospy.init_node('imageToObjects', anonymous=True)
     print("Creating windows")
     cv2.namedWindow(MAIN_WINDOW_NAME, cv2.WINDOW_NORMAL)
-    cv2.namedWindow('Window2', cv2.WINDOW_NORMAL)
 
-    cv2.createTrackbar("Nb img profondeur", MAIN_WINDOW_NAME, nb_depth_imgs_cache, IMG_DEPTH_MAX, changeprofondeur)
+    cv2.createTrackbar("Nb img profondeur", MAIN_WINDOW_NAME, nb_depth_imgs_cache, IMG_DEPTH_MAX, change_nb_depth_imgs)
     cv2.createTrackbar('Show', MAIN_WINDOW_NAME, 0, 1, show_imgs)
-    cv2.createTrackbar("Show Color Image", MAIN_WINDOW_NAME, 0, 1, changeaffcouleur)
-    cv2.createTrackbar("Show Depth Image", MAIN_WINDOW_NAME, 0, 1, changeaffprofondeur)
+    cv2.createTrackbar("Show Color Image", MAIN_WINDOW_NAME, 0, 1, show_clr_imgs)
+    cv2.createTrackbar("Show Depth Image", MAIN_WINDOW_NAME, 0, 1, show_depth_imgs)
     cv2.createTrackbar('Learn from disk', MAIN_WINDOW_NAME, 0, 1, learn_from_disk)
     cv2.createTrackbar('Test from disk', MAIN_WINDOW_NAME, 0, 1, test_from_disk)
-    cv2.createTrackbar('Partial Learn Disk', MAIN_WINDOW_NAME, 0, 1, complete_lrn_disk)
+    # cv2.createTrackbar('Partial Learn Disk', MAIN_WINDOW_NAME, 0, 1, complete_lrn_disk)
     cv2.createTrackbar('Partial TST', MAIN_WINDOW_NAME, 0, 1, partial_test_from_disk)
     cv2.createTrackbar('Save IMGs Learn', MAIN_WINDOW_NAME, 0, 1, save_imgs_learn)
     cv2.createTrackbar('Save IMGs Test', MAIN_WINDOW_NAME, 0, 1, save_imgs_test)
     cv2.createTrackbar('Info HoG', MAIN_WINDOW_NAME, 0, 1, hog_info)
     cv2.createTrackbar('Save HoG to Disk', MAIN_WINDOW_NAME, 0, 1, save_hog)
     cv2.createTrackbar('Learn HoG stored in Memory', MAIN_WINDOW_NAME, 0, 1, learn)
-    cv2.createTrackbar('Test labels from disk', MAIN_WINDOW_NAME, 0, 1, test_from_disk_label)
     cv2.createTrackbar('Load HoG', MAIN_WINDOW_NAME, 0, 1, load_hog)
     cv2.createTrackbar('Save Classifier', MAIN_WINDOW_NAME, 0, 1, save_classifier)
     cv2.createTrackbar('Load Classifier', MAIN_WINDOW_NAME, 0, 1, load_classifier)
     cv2.createTrackbar('Check Queue', MAIN_WINDOW_NAME, 0, 1, check_str_imgs)
     cv2.createTrackbar('Plot Classes as 2D', MAIN_WINDOW_NAME, 0, 1, plot_2d_classes)
-    cv2.createTrackbar('Live Learn', MAIN_WINDOW_NAME, 0, 1, complete_lrn)
     cv2.createTrackbar('Debug', MAIN_WINDOW_NAME, 0, 1, debug)
     cv2.createTrackbar('Predict HoG', MAIN_WINDOW_NAME, 0, 1, hog_pred)
-    cv2.createTrackbar('Recording', 'Window2', 0, 1, record)
+    cv2.createTrackbar('Recording', MAIN_WINDOW_NAME, 0, 1, record)
 
     # cv2.createTrackbar("Depth Capture Range", MAIN_WINDOW_NAME, int(100 * val_depth_capture), 150, changecapture)
     cv2.imshow(MAIN_WINDOW_NAME, 0)
     # big_test(1)
     # load_classifier(1)
     print("Creating subscribers")
-    image_sub_rgb = rospy.Subscriber("/camera/rgb/image_rect_color", Image, callback_rgb, queue_size=1)
-    image_sub_depth = rospy.Subscriber("/camera/depth_registered/image_raw/", Image, callback_depth, queue_size=1)
+    image_sub_rgb = rospy.Subscriber("/camera/rgb/image_raw", Image, callback_rgb, queue_size=1)
+    image_sub_depth = rospy.Subscriber("/camera/depth/image/", Image, callback_depth, queue_size=1)
     detected_objects_list_publisher = rospy.Publisher('detected_objects_list', Detected_Objects_List, queue_size=1)
     object_sub = rospy.Subscriber("audition_features", Audition_Features, callback_audio_recognition)
     print("Spinning ROS")
+    time.sleep(1)
     try:
         while not rospy.core.is_shutdown():
             begin_treatment()
