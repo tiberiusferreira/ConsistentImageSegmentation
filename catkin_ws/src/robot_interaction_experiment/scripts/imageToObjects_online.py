@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import division
+
 import rospy
 import numpy as np
 from scipy import ndimage
@@ -11,20 +13,14 @@ from robot_interaction_experiment.msg import Detected_Object
 from robot_interaction_experiment.msg import Detected_Objects_List
 from robot_interaction_experiment.msg import Audition_Features
 from sklearn.linear_model import SGDClassifier
-from sklearn.ensemble import BaggingClassifier
-from sklearn.neighbors import KNeighborsClassifier
 from collections import Counter
 import joblib
-from sklearn import svm
-from scipy.stats.stats import pearsonr
 import os
 import cv2
 import pickle
 import Queue
 import random
 import time
-import bufferImageMsg
-from skimage.feature import hog
 import pylab as Plot
 import tsne
 import copy
@@ -51,12 +47,12 @@ NM_SAMPLES = 50000
 ####################
 
 img_clean_bgr_class = 0
-nb_depth_imgs_cache = 20  # default number of depth images to consider
+nb_depth_imgs_cache = 5  # default number of depth images to consider
 show_depth = False
 show_color = False
 val_depth_capture = 0.05
 depth_img_index = 0
-last_depth_imgs = range(IMG_DEPTH_MAX + 1)
+last_depth_imgs = list()
 number_last_points = 15
 hog_list = list()
 depth_img_avg = 0
@@ -73,7 +69,7 @@ img_clean_bgr_learn = None
 img_clean_gray_class = None
 saved = 0
 color = ''
-n_bin = 6  # 4 number of orientations for the HoG
+n_bin = 10  # 4 number of orientations for the HoG
 b_size = 64  # 15  block size
 b_stride = 32
 c_size = 32  # 15  cell size
@@ -87,7 +83,6 @@ shuffled_y = list()
 shuffled_x = list()
 live_cnt = 0
 hog_size = 0
-division = 50
 iterations = 0
 # clf = BaggingClassifier(svm.SVC(probability=True), n_estimators=division, max_samples=1.0/30)
 clf = SGDClassifier(loss='log', random_state=10, shuffle=True)
@@ -113,7 +108,12 @@ lowest_conf = 0
 last_upright = list()
 interactions_get_cube = 0
 last_imgs = list()
-
+clr_timestamp = 0
+depth_timestamp = 0
+last_clr_timestamp = 0
+distance = 0
+x = 0
+y = 0
 
 def save_imgs_learn(value):
     global label
@@ -201,13 +201,9 @@ def clean(img, n):
 
 def callback_depth(msg):
     global new_rgb
-    global got_color
-    # if new_rgb == 1:
-    #     new_rgb = 0
-    # else:
-    #     return
+    global depth_timestamp
     # treating the image containing the depth data
-    global depth_img_index, last_depth_imgs, depth_img_avg, got_depth
+    global depth_img_index, last_depth_imgs, depth_img_avg
     # getting the image
     try:
         img = CvBridge().imgmsg_to_cv2(msg, "passthrough")
@@ -222,26 +218,41 @@ def callback_depth(msg):
     else:
         cv2.destroyWindow("Depth")
     # storing the image
-    last_depth_imgs[depth_img_index] = np.copy(cleanimage)
-    depth_img_index += 1
-    if depth_img_index > nb_depth_imgs_cache:
-        depth_img_index = 0
+    # depth_img_avg = cleanimage
+    last_depth_imgs.append(copy.copy(cleanimage))
+    depth_img_avg = np.array([sum(e) / len(e) for e in zip(*last_depth_imgs)])
+    if len(last_depth_imgs) == 7:
+        last_depth_imgs = list()
+    # print (last_depth_imgs)
+
     # creates an image which is the average of the last ones
-    depth_img_avg = np.copy(last_depth_imgs[0])
-    for i in range(1, nb_depth_imgs_cache):
-        depth_img_avg += last_depth_imgs[i]
-    depth_img_avg /= nb_depth_imgs_cache
-    got_depth = True  # ensures there is an depth image available
-    if got_color and got_depth:
-        got_color = False
+    # depth_img_avg = (last_depth_imgs).mean()
+    # print (depth_img_avg)
+    # for i in range(0, depth_img_index):
+    #     if i == 0:
+    #         depth_img_avg = last_depth_imgs[0]
+    #         continue
+    #     depth_img_avg += last_depth_imgs[i]
+    # depth_img_avg /= (depth_img_index+1)
+    depth_img_index += 1
+    depth_timestamp = msg.header.stamp
+
+
+def begin_treatment():
+    global depth_timestamp, clr_timestamp, last_clr_timestamp, depth_img_avg
+    if not depth_timestamp == 0 and not clr_timestamp == 0:
+        last_clr_timestamp = clr_timestamp
+        cv2.imshow('depth avg', depth_img_avg)
         get_cube_upright()
 
 
+    # get_cube_upright()
+
+
 def callback_rgb(msg):
-    global new_rgb
     global using_VGA
-    global got_color
-    new_rgb = 1
+    global clr_timestamp
+    global new_rgb
     # processing of the color image
     global img_bgr8_clean, got_color
     # getting image
@@ -253,7 +264,7 @@ def callback_rgb(msg):
     if not using_VGA:
         img = img[32:992, 0:1280]  # crop the image because it does not have the same aspect ratio of the depth one
     img_bgr8_clean = np.copy(img)
-    got_color = True  # ensures there is an color image available
+    clr_timestamp = msg.header.stamp
     if show_color:
         # show image obtained
         cv2.imshow("couleur", img_bgr8_clean)
@@ -297,6 +308,14 @@ def check_str_imgs(value):
         cv2.waitKey(300)
 
 
+def click_and_crop(event, rx, ry, flags, param):
+    global x, y, depth_img_avg_cp
+    if event == cv2.EVENT_LBUTTONUP:
+        print ('clicked ' + str(depth_img_avg_cp[x, y]))
+        x = rx
+        y = ry
+
+
 def get_cube_upright():
     # Uses the depth image to only take the part of the image corresponding to the closest point and a bit further
     global depth_img_avg
@@ -305,12 +324,22 @@ def get_cube_upright():
     global using_VGA
     global last_upright
     global interactions_get_cube
-    send = 1
-    closest_pnt = np.amin(depth_img_avg)
+    global distance
+    global depth_img_avg_cp
+    img_bgr8_clean_copy = img_bgr8_clean.copy()
     # resize the depth image so it matches the color one
-    depth_img_avg_cp = depth_img_avg.copy()
+    depth_img_avg_cp = copy.copy(depth_img_avg)
     if not using_VGA:
         depth_img_avg_cp = cv2.resize(depth_img_avg_cp, (1280, 960))
+    closest_pnt = np.amin(depth_img_avg)
+    # print ('from amin = ' + str(closest_pnt))
+    # cv2.imshow('Click on Object', img_bgr8_clean_copy)
+    # cv2.waitKey(1)
+    # cv2.setMouseCallback('Click on Object', click_and_crop)
+    # while x == 0 or y == 0:
+    #     cv2.waitKey(1)
+    # closest_pnt = depth_img_avg_cp[x, y]
+    # print ( ' From clicked = ' + str(closest_pnt))
     # generate a mask with the closest points
     img_detection = np.where(depth_img_avg_cp < closest_pnt + val_depth_capture, depth_img_avg_cp, 0)
     # put all the pixels greater than 0 to 255
@@ -321,7 +350,6 @@ def get_cube_upright():
     useful_cnts = list()
     uprightrects_tuples = list()
     all_upright = list()
-    img_bgr8_clean_copy = img_bgr8_clean.copy()
     for cnt in contours:
         if not using_VGA:
             if 8500 < cv2.contourArea(cnt) < 16000:
@@ -352,19 +380,6 @@ def get_cube_upright():
             continue
         points = cv2.boxPoints(min_area_rect)  # Find four vertices of rectangle from above rect
         points = np.int32(np.around(points))  # Round the values and make it integers
-        # rect_list.append(points)
-        # if len(rect_list) == 7:
-        #     for cnt, rec in enumerate(rect_list):
-        #         rect_list[cnt] = np.reshape(rec, (1, -1))[0]
-        #         # print (rec)
-        #     # print (rect_list[0])
-        #     print((pearsonr(rect_list[0], rect_list[6]))[0])
-        #     if (pearsonr(rect_list[0], rect_list[6]))[0] < 0.999:
-        #         rect_list = list()
-        #         send = 0
-        #     rect_list = list()
-        # else:
-        #     send = 0
         cv2.drawContours(img_bgr8_clean_copy, [points], 0, (0, 0, 255), 2)
         cv2.drawContours(img_bgr8_clean_copy, cnts, -1, (255, 0, 255), 2)
         cv2.waitKey(1)
@@ -563,7 +578,8 @@ def learn_from_str(value):
     while not stored_imgs.empty():
         i += 1
         img_bgr8 = stored_imgs.get()
-        cv2.imshow("Learning " + str(i),img_bgr8)
+        cv2.imshow("Learning " + str(i) + str(nb_real_additional_classes), img_bgr8)
+        cv2.waitKey(1)
         learn_hog(img_bgr8)
     print (Counter(labels))
     learn(1)
@@ -699,28 +715,70 @@ def get_img_to_be_sent(img):
 def check_stability(last_objs):
     last_objs_c = copy.copy(last_objs)
     obj_center_list = list()
+    my_center_list = list()
     nb_obj = 0
+    stable = 1
+    sorted_by_first = list()
     for index, obj_snapshot in enumerate(last_objs_c):
         if index == 0:
             nb_obj = len(obj_snapshot)
         else:
             if not nb_obj == len(obj_snapshot):
-                print ("Obj number not stable!")
-                return
-    for obj in range(nb_obj):
-        one_obj_center_hist = list()
-        for index, obj_snapshot in enumerate(last_objs_c):
-            img_bgr8, center = obj_snapshot[obj]
-            one_obj_center_hist.append(center)
-        obj_center_list.append(one_obj_center_hist)
-    for obj in range(nb_obj):
-        x0, y0 = obj_center_list[obj][0]
-        x6, y6 = obj_center_list[obj][6]
-        dist = math.sqrt(abs(x0**2 - x6**2) + abs(y0**2 - y6**2))
+                # print ("Obj number not stable!")
+                stable = 0
+                return stable
+    # for index, obj_snapshot in enumerate(last_objs_c):  # for each period of time
+    #     for obj_index, obj_in_sameTime in enumerate(obj_snapshot):
+    #         img_bgr8_list, center_list = obj_in_sameTime    # for each obj in the same period of time
+    #         my_center_list.append(center_list)
+    #     sorted_by_second = sorted(my_center_list, key=lambda tup: tup[1])
+    #     sorted_by_first.append(sorted(sorted_by_second, key=lambda tup: tup[0]))
+    for index, obj_snapshot in enumerate(last_objs_c):  # for each period of time
+        sorted_by_second = sorted(obj_snapshot, key=lambda tup: tup[1][1])
+        sorted_by_first = sorted(obj_snapshot, key=lambda tup: tup[1][0])
+        last_objs_c[index] = sorted_by_first
 
-        print (dist)
+        # print ([x[1] for x in sorted_by_first]
+        # print ('\n')
+            # print (center_list)
+        # print (sorted_by_second)
+    for obj in range(nb_obj):   # for each obj
+        one_obj_center_hist = list()
+        for index, obj_snapshot in enumerate(last_objs_c):  # for each time
+            img_bgr8, center = obj_snapshot[obj]    # get a given obj in time
+            one_obj_center_hist.append(center)      # append always the same obj in all times
+        obj_center_list.append(one_obj_center_hist)
+    # for obj in range(nb_obj):
+        # sorted_by_second = sorted(obj_center_list, key=lambda tup: tup[1])
+        # print (obj_center_list)
+        # print ('\n')
+    for obj in range(nb_obj):
+        for one in range(7):
+            x_one, y_one = obj_center_list[obj][one]
+            for other in range(7):
+                x_other, y_other = obj_center_list[obj][other]
+                dist = math.sqrt(abs(x_one**2 - x_other**2) + abs(y_one**2 - y_other**2))
+                if dist > 200:
+                    stable = 0
+    # print ('Stable = ' + str(stable))
+    return stable
     # print (obj_center_list)
     # print ('\n')
+
+
+def learn_tuple(curr_tuple, obj_history):
+    img, center_targ = curr_tuple
+    print (center_targ)
+    indexx = 0
+    for snapshot in (obj_history[0], obj_history[4], obj_history[6]):
+        for objs in snapshot:
+            img, center = objs
+            dist = math.sqrt(abs(center_targ[0] ** 2 - center[0] ** 2) + abs(center_targ[1] ** 2 - center[1] ** 2))
+            if dist < 200:
+                str_img(img)
+                # cv2.imshow('Learn?' + str(indexx), img)
+                # cv2.waitKey(1)
+                # indexx += 1
 
 
 def objects_detector(uprightrects_tuples):
@@ -753,8 +811,13 @@ def objects_detector(uprightrects_tuples):
     else:
         index_last_obj = iterations % 7
         obj_history[index_last_obj] = uprightrects_tuples
-    check_stability(obj_history)
-
+    if check_stability(obj_history) == 0:
+        return
+    # for indexx, snapshots in enumerate(obj_history):
+    #     # print (snapshots[0][0])
+    #     cv2.imshow('Good? ' + str(indexx), snapshots[0][0])
+    #     cv2.waitKey(1)
+    uprightrects_tuples = obj_history[2]
     for index, curr_tuple in enumerate(uprightrects_tuples):
         img_bgr8, center = curr_tuple
         width, height, d = np.shape(img_bgr8)
@@ -777,10 +840,11 @@ def objects_detector(uprightrects_tuples):
             if iterations % 50 == 0:
                 print (confiance)
             # print("storing " + str(confiance))
-            if confiance < 0.75 and recording:
-                str_img(img_clean_bgr_learn)
-            if stored_imgs.full():
+            if confiance < 0.85 and recording:
+                learn_tuple(curr_tuple, obj_history)
                 learn_from_str(1)
+                final = cv2.resize(img_clean_bgr_class, (256, 256))
+            # print("storing " + str(confiance))
         if saving_learn == 1:
             cv2.imshow('LEARN', img_clean_bgr_learn)
             cv2.waitKey(1000)
@@ -798,7 +862,7 @@ def objects_detector(uprightrects_tuples):
                     print("Could not load it, quitting")
             else:
                 cv2.imshow('Sent' + str(index), final)
-                cv2.waitKey(10)
+                cv2.waitKey(100)
         # if got_speech == 0:
         #     pass
         # else:
@@ -1209,12 +1273,12 @@ def big_test(value):
 
 
 def getpixelfeatures(object_img_bgr8):
-    object_img_bgr8 = cv2.resize(object_img_bgr8, (30,30))
+    object_img_bgr8 = cv2.resize(object_img_bgr8, (30, 30))
     object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
     # gets the color histogram divided in N_COLORS "categories" with range 0-179
     colors_histo, histo_bins = np.histogram(object_img_hsv[:, :, 0], bins=N_COLORS, range=(0, 179))
     colors_histo[0] -= len(np.where(object_img_hsv[:, :, 1] == 0)[0])
-    half_segment = N_COLORS / 4
+    half_segment = int(N_COLORS / 4)
     middle = colors_histo * np.array([0.0] * half_segment + [1.0] * 2 * half_segment + [0.0] * half_segment)
     sigma = 2.0
     middle = ndimage.filters.gaussian_filter1d(middle, sigma)
@@ -1276,7 +1340,7 @@ if __name__ == '__main__':
     print("Spinning ROS")
     try:
         while not rospy.core.is_shutdown():
-            rospy.rostime.wallsleep(0.5)
+            begin_treatment()
     except KeyboardInterrupt:
         print("Shutting down")
         exit(1)
