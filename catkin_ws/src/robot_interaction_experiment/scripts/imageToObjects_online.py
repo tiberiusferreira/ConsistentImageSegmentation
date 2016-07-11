@@ -30,18 +30,14 @@ import threading
 # Constants max HoG size = 900  #
 ####################
 
-NB_MSG_MAX = 50
 MAIN_WINDOW_NAME = "Segmentator"
 MIN_AREA = 9000  # minimal area to consider a desirable object
 MAX_AREA = 15000  # maximal area to consider a desirable object
 N_COLORS = 80  # number of colors to consider when creating the image descriptor
-IMG_DEPTH_MAX = 100  # maximum number of depth images to cache
 LRN_PATH = 'LRN_IMGS/'
 PARTIAL_LRN_PATH = 'PARTIAL_LRN/'
 TST_PATH = 'TST_IMGS/'
 PARTIAL_TST_PATH = 'PARTIAL_TST/'
-TST_PATH_UPRIGHT = 'TST_UPRIGHT/'
-NM_SAMPLES = 50000
 
 ####################
 # Global variables #
@@ -116,11 +112,11 @@ distance = 0
 x = 0
 y = 0
 refPt = list()
+last_depth_timestamp = 0
 cropping = False
 rgb_lock = threading.Lock()
 depth_lock = threading.Lock()
 treatment_lock = threading.Lock()
-
 
 
 def save_imgs_learn(value):
@@ -209,10 +205,8 @@ def clean(img, n):
 
 def callback_depth(msg):
     depth_lock.acquire()
-    global new_rgb
-    global depth_timestamp
     # treating the image containing the depth data
-    global depth_img_index, last_depth_imgs, depth_img_avg
+    global depth_img_index, last_depth_imgs, depth_img_avg, depth_timestamp
     # getting the image
     try:
         img = CvBridge().imgmsg_to_cv2(msg, "passthrough")
@@ -228,50 +222,59 @@ def callback_depth(msg):
         cv2.destroyWindow("Depth")
     if not using_VGA:
         cleanimage = cv2.resize(cleanimage, (1280, 960))
-    # storing the image
-    # depth_img_avg = cleanimage
     last_depth_imgs.append(copy.copy(cleanimage))
     depth_img_avg = np.array([sum(e) / len(e) for e in zip(*last_depth_imgs)])
-    if len(last_depth_imgs) == 7:
+    if len(last_depth_imgs) == 3:
         last_depth_imgs = list()
     depth_img_index += 1
     depth_timestamp = msg.header.stamp
     depth_lock.release()
 
 
-
 def begin_treatment():
     treatment_lock.acquire()
-    global depth_timestamp, clr_timestamp, last_clr_timestamp, depth_img_avg, refPt, img_bgr8_clean
-    if not depth_timestamp == 0 and not clr_timestamp == 0 and not clr_timestamp == last_clr_timestamp:
+    global depth_timestamp, clr_timestamp, last_clr_timestamp, last_depth_timestamp, depth_img_avg, refPt, \
+        img_bgr8_clean
+    img_bgr8_clean_copy = img_bgr8_clean.copy()
+    depth_img_avg_copy = depth_img_avg.copy()
+    if not depth_timestamp == 0 and not clr_timestamp == 0 and not clr_timestamp == last_clr_timestamp\
+            and not depth_timestamp == last_depth_timestamp:
         last_clr_timestamp = clr_timestamp
+        last_depth_timestamp = depth_timestamp
         if not len(refPt) == 2:
             window_name = 'Select Region'
             cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
-            cv2.imshow(window_name, img_bgr8_clean)
+            cv2.imshow(window_name, img_bgr8_clean_copy)
             cv2.setMouseCallback(window_name, click_and_crop)
             while not len(refPt) == 2:
                 cv2.waitKey(50)
             cv2.destroyWindow(window_name)
-        print (np.shape(img_bgr8_clean))
-        img_bgr8_clean = img_bgr8_clean[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
-        depth_img_avg = depth_img_avg[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
-        print (np.shape(img_bgr8_clean))
-        print ('\n')
+        img_bgr8_clean_copy = img_bgr8_clean_copy[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
+        depth_img_avg_copy = depth_img_avg_copy[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
+        Sobelx = cv2.Sobel(img_bgr8_clean_copy, -1, 1, 0, ksize=1)
+        Sobely = cv2.Sobel(img_bgr8_clean_copy, -1, 0, 1, ksize=1)
+        Sobel = Sobelx + Sobely
+        img_bgr8_clean_copy = Sobel
+        img_bgr8_clean_copy = cv2.cvtColor(img_bgr8_clean_copy, cv2.COLOR_BGR2GRAY)
+        cv2.imshow('RGB_img', img_bgr8_clean_copy)
+        cv2.waitKey(1)
+        _, eigenvectors = cv2.PCACompute(img_bgr8_clean_copy, np.array([]))
+        # print(eigenvectors)
+
+        print (str(math.atan2(eigenvectors[0][1], eigenvectors[0][0])) + " | " + str(
+            math.atan2(eigenvectors[1][1], eigenvectors[1][0])))
+
         # while x == 0 or y == 0:
         #     cv2.waitKey(1)
         # cv2.waitKey(0)
-        get_cube_upright()
-        treatment_lock.release()
+        # get_cube_upright()
+    treatment_lock.release()
 
 
 def callback_rgb(msg):
     rgb_lock.acquire()
-    global using_VGA
-    global clr_timestamp
-    global new_rgb
+    global using_VGA, clr_timestamp, img_bgr8_clean, got_color
     # processing of the color image
-    global img_bgr8_clean, got_color
     # getting image
     try:
         img = CvBridge().imgmsg_to_cv2(msg, "bgr8")
@@ -280,7 +283,7 @@ def callback_rgb(msg):
         return
     if not using_VGA:
         img = img[32:992, 0:1280]  # crop the image because it does not have the same aspect ratio of the depth one
-    img_bgr8_clean = np.copy(img)
+    img_bgr8_clean = img
     clr_timestamp = msg.header.stamp
     if show_color:
         # show image obtained
@@ -1154,7 +1157,6 @@ if __name__ == '__main__':
     print("Creating windows")
     cv2.namedWindow(MAIN_WINDOW_NAME, cv2.WINDOW_NORMAL)
 
-    cv2.createTrackbar("Nb img profondeur", MAIN_WINDOW_NAME, nb_depth_imgs_cache, IMG_DEPTH_MAX, change_nb_depth_imgs)
     cv2.createTrackbar('Show', MAIN_WINDOW_NAME, 0, 1, show_imgs)
     cv2.createTrackbar("Show Color Image", MAIN_WINDOW_NAME, 0, 1, show_clr_imgs)
     cv2.createTrackbar("Show Depth Image", MAIN_WINDOW_NAME, 0, 1, show_depth_imgs)
@@ -1175,11 +1177,7 @@ if __name__ == '__main__':
     cv2.createTrackbar('Debug', MAIN_WINDOW_NAME, 0, 1, debug)
     cv2.createTrackbar('Predict HoG', MAIN_WINDOW_NAME, 0, 1, hog_pred)
     cv2.createTrackbar('Recording', MAIN_WINDOW_NAME, 0, 1, record)
-
-    # cv2.createTrackbar("Depth Capture Range", MAIN_WINDOW_NAME, int(100 * val_depth_capture), 150, changecapture)
     cv2.imshow(MAIN_WINDOW_NAME, 0)
-    # big_test(1)
-    # load_classifier(1)
     print("Creating subscribers")
     image_sub_rgb = rospy.Subscriber("/camera/rgb/image_raw", Image, callback_rgb, queue_size=1)
     image_sub_depth = rospy.Subscriber("/camera/depth/image/", Image, callback_depth, queue_size=1)
