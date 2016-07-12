@@ -26,6 +26,7 @@ import tsne
 import copy
 import math
 import threading
+from sklearn.decomposition import PCA
 ####################
 # Constants max HoG size = 900  #
 ####################
@@ -52,8 +53,8 @@ depth_img_index = 0
 last_depth_imgs = list()
 number_last_points = 15
 hog_list = list()
-depth_img_avg = 0
-img_bgr8_clean = 0
+depth_img_avg = np.zeros((100, 100))
+img_bgr8_clean = np.zeros((100, 100))
 got_color = False
 got_depth = False
 labels = list()
@@ -231,38 +232,72 @@ def callback_depth(msg):
     depth_lock.release()
 
 
+def cut_working_area(clr_img, depth_img):
+    global refPt
+    if not len(refPt) == 2:
+        print("Selecting working region")
+        window_name = 'Select Region'
+        cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+        cv2.imshow(window_name, clr_img)
+        cv2.setMouseCallback(window_name, click_and_crop)
+        while not len(refPt) == 2:
+            cv2.waitKey(50)
+        cv2.destroyWindow(window_name)
+    clr_img = clr_img[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
+    depth_img = depth_img[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
+    return clr_img, depth_img
+
+
 def begin_treatment():
     treatment_lock.acquire()
     global depth_timestamp, clr_timestamp, last_clr_timestamp, last_depth_timestamp, depth_img_avg, refPt, \
         img_bgr8_clean
     img_bgr8_clean_copy = img_bgr8_clean.copy()
     depth_img_avg_copy = depth_img_avg.copy()
+    print (depth_timestamp)
+    print (clr_timestamp)
+    print (last_clr_timestamp)
+    print (last_depth_timestamp)
     if not depth_timestamp == 0 and not clr_timestamp == 0 and not clr_timestamp == last_clr_timestamp\
             and not depth_timestamp == last_depth_timestamp:
         last_clr_timestamp = clr_timestamp
         last_depth_timestamp = depth_timestamp
-        if not len(refPt) == 2:
-            window_name = 'Select Region'
-            cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
-            cv2.imshow(window_name, img_bgr8_clean_copy)
-            cv2.setMouseCallback(window_name, click_and_crop)
-            while not len(refPt) == 2:
-                cv2.waitKey(50)
-            cv2.destroyWindow(window_name)
-        img_bgr8_clean_copy = img_bgr8_clean_copy[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
-        depth_img_avg_copy = depth_img_avg_copy[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
+        img_bgr8_clean_copy, depth_img_avg_copy = cut_working_area(img_bgr8_clean_copy, depth_img_avg_copy)
         Sobelx = cv2.Sobel(img_bgr8_clean_copy, -1, 1, 0, ksize=1)
         Sobely = cv2.Sobel(img_bgr8_clean_copy, -1, 0, 1, ksize=1)
         Sobel = Sobelx + Sobely
         img_bgr8_clean_copy = Sobel
         img_bgr8_clean_copy = cv2.cvtColor(img_bgr8_clean_copy, cv2.COLOR_BGR2GRAY)
+        # img_bgr8_clean_copy = cv2.GaussianBlur(img_bgr8_clean_copy, (5, 5), 0)
+        ret3, img_bgr8_clean_copy = cv2.threshold(img_bgr8_clean_copy, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # cv2.imshow('Result', img_bgr8_clean_copy)
+        # cv2.waitKey(1)
+        data = list()
+        row, col = np.shape(img_bgr8_clean_copy)
+        for x in range(row):
+            for y in range(col):
+                if img_bgr8_clean_copy[x][y] > 0:
+                    data.append([x, y])
+        # print (data)
+        X = data
+        pca = PCA(n_components=2)
+        pca.fit(X)
+        # print (pca.components_)
+        # img_row = np.reshape(img_bgr8_clean_copy,(-1))
+        # _, eigenvectors = cv2.PCACompute(img_bgr8_clean_copy, np.array([]))
+        # print (eigenvectors)
+        # print ('Got PCA')
+        img_bgr8_clean_copy = cv2.cvtColor(img_bgr8_clean_copy, cv2.COLOR_GRAY2BGR)
+        # print ('Drawing line')
+        pca_comp = pca.components_*100
+        print (np.shape(pca_comp))
+        cv2.line(img_bgr8_clean_copy, (int(pca_comp[0][0]), int(pca_comp[0][1])), (int(pca_comp[1][0]), int(pca_comp[1][1])), (255, 0, 0), 5)
         cv2.imshow('RGB_img', img_bgr8_clean_copy)
         cv2.waitKey(1)
-        _, eigenvectors = cv2.PCACompute(img_bgr8_clean_copy, np.array([]))
         # print(eigenvectors)
 
-        print (str(math.atan2(eigenvectors[0][1], eigenvectors[0][0])) + " | " + str(
-            math.atan2(eigenvectors[1][1], eigenvectors[1][0])))
+        # print (str(math.atan2(eigenvectors[0][1], eigenvectors[0][0])) + " | " + str(
+        #     math.atan2(eigenvectors[1][1], eigenvectors[1][0])))
 
         # while x == 0 or y == 0:
         #     cv2.waitKey(1)
@@ -272,6 +307,7 @@ def begin_treatment():
 
 
 def callback_rgb(msg):
+    # print ('New rgb')
     rgb_lock.acquire()
     global using_VGA, clr_timestamp, img_bgr8_clean, got_color
     # processing of the color image
@@ -280,6 +316,7 @@ def callback_rgb(msg):
         img = CvBridge().imgmsg_to_cv2(msg, "bgr8")
     except CvBridgeError as e:
         print(e)
+        rgb_lock.release()
         return
     if not using_VGA:
         img = img[32:992, 0:1280]  # crop the image because it does not have the same aspect ratio of the depth one
@@ -291,6 +328,7 @@ def callback_rgb(msg):
         cv2.waitKey(1)
     else:
         cv2.destroyWindow("couleur")
+    # print ('New rgb saved')
     rgb_lock.release()
 
 
@@ -1187,6 +1225,7 @@ if __name__ == '__main__':
     time.sleep(1)
     try:
         while not rospy.core.is_shutdown():
+            time.sleep(0.2)
             begin_treatment()
     except KeyboardInterrupt:
         print("Shutting down")
