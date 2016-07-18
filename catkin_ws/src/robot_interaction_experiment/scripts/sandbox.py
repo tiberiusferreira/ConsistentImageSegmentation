@@ -9,7 +9,7 @@ from copy import copy
 import time
 
 
-from numpy import mean,cov,cumsum,dot,linalg,size,flipud
+from numpy import mean, cov, cumsum, dot, linalg, size, flipud
 
 def princomp(A,numpc=0):
     # computing eigenvalues and eigenvectors of covariance matrix
@@ -80,10 +80,10 @@ def apply_pca(img):
 
 
 if __name__ == '__main__':
-    for imgs in ('clipincl2.png', 'clipincl1.png'):
+    for imgs in ('bird_rot0.png', 'bird_rot1.png'):
         img = cv2.imread(imgs)
-        row, col, d = np.shape(img)
-        img = img[30:row-30, 30:col-30]
+        w, l, d = np.shape(img)
+        img = img[13:w - 5, 13:l - 8]
         img = cv2.resize(img, (400, 400))
         Sobelx = cv2.Sobel(img, -1, 1, 0, ksize=1)
         Sobely = cv2.Sobel(img, -1, 0, 1, ksize=1)

@@ -24,7 +24,8 @@ import tsne
 import copy
 import math
 import threading
-from pca import pca
+from orientation import pca, machinelearning, min_area_triang
+
 
 ####################
 # Constants max HoG size = 900  #
@@ -39,10 +40,7 @@ MAX_AREA = 16000  # maximal area to consider a desirable object
 MIN_CNT_LENGTH = 400  # minimal contour lenght to be consided a desirable object
 MAX_CNT_LENGTH = 640  # maximal contour lenght to be consided a desirable object
 N_COLORS = 80  # number of colors to consider when creating the image descriptor
-LRN_PATH = 'LRN_IMGS/'
-PARTIAL_LRN_PATH = 'PARTIAL_LRN/'
-TST_PATH = 'TST_IMGS/'
-PARTIAL_TST_PATH = 'PARTIAL_TST/'
+
 
 ####################
 # Global variables #
@@ -218,7 +216,36 @@ def begin_treatment():
 
 
 def orientate_imgs(imgs_n_centers):
+    # Does not really work, just to visualize 'why' is does not work
+    # min_area_triang.objects_detector(imgs_n_centers)
     pca.apply_sobel(imgs_n_centers)
+
+    # final_imgs = machinelearning.objects_detector(imgs_n_centers)
+    # if final_imgs is None or len(final_imgs) == 0:
+    #     return
+    # for index, img in enumerate(final_imgs):
+    #     cv2.imshow('Img ' + str(index), img)
+    #     if loaded_clf:
+    #         rows, cols, d = final.shape
+    #         detected_object = Detected_Object()
+    #         detected_object.id = 1
+    #         detected_object.image = CvBridge().cv2_to_imgmsg(final, encoding="passthrough")
+    #         detected_object.center_x = rows / 2
+    #         detected_object.center_y = cols / 2
+    #         detected_object.features.hog_histogram = get_img_hog(final)[0]
+    #         colors_histo, object_shape = getpixelfeatures(final)
+    #         detected_object.features.colors_histogram = colors_histo.tolist()
+    #         detected_object.features.shape_histogram = object_shape.tolist()
+    #         detected_objects_list.append(detected_object)
+    #         if recording == 1:
+    #             cv2.imshow('Just Sent' + str(index), final)
+    #
+    # # if got_speech == 0:
+    # #     return
+    # if loaded_clf:
+    #     detected_objects_list_msg = Detected_Objects_List()
+    #     detected_objects_list_msg.detected_objects_list = detected_objects_list
+    #     detected_objects_list_publisher.publish(detected_objects_list_msg)
 
 '''
 Callback from the audio related topic. Receives the current dictionary, words histogram and last spoken words (speech).
@@ -343,7 +370,6 @@ def find_cnts_in_depth(depth):
             ret, mask = cv2.threshold(img_detection, 0.0, 255, cv2.THRESH_BINARY)
             # convert to 8-bit
             mask = np.array(mask, dtype=np.uint8)
-            print (closest_pnt)
             # cv2.imshow('Depth', mask)
             # cv2.waitKey(0)
             im2, contours, hierarchy = cv2.findContours(mask, mode=cv2.RETR_LIST, method=cv2.CHAIN_APPROX_SIMPLE,
@@ -378,6 +404,31 @@ def find_cnts_in_depth(depth):
     #     return None
     return useful_cnts
 
+
+def getpixelfeatures(object_img_bgr8):
+    object_img_bgr8 = cv2.resize(object_img_bgr8, (30, 30))
+    object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
+    # gets the color histogram divided in N_COLORS "categories" with range 0-179
+    colors_histo, histo_bins = np.histogram(object_img_hsv[:, :, 0], bins=N_COLORS, range=(0, 179))
+    colors_histo[0] -= len(np.where(object_img_hsv[:, :, 1] == 0)[0])
+    half_segment = int(N_COLORS / 4)
+    middle = colors_histo * np.array([0.0] * half_segment + [1.0] * 2 * half_segment + [0.0] * half_segment)
+    sigma = 2.0
+    middle = ndimage.filters.gaussian_filter1d(middle, sigma)
+    exterior = colors_histo * np.array([1.0] * half_segment + [0.0] * 2 * half_segment + [1.0] * half_segment)
+    exterior = np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
+    exterior = ndimage.filters.gaussian_filter1d(exterior, sigma)
+    colors_histo = middle + np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
+    colors_histo = colors_histo / float(np.sum(colors_histo))
+    object_shape = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2GRAY)
+    object_shape = np.ndarray.flatten(object_shape)
+    sum = float(np.sum(object_shape))
+    if sum != 0:
+        object_shape = object_shape / float(np.sum(object_shape))
+    features = Vision_Features()
+    # features.colors_histogram = colors_histo
+    # features.shape_histogram = object_shape
+    return colors_histo, object_shape
 
 if __name__ == '__main__':
     rospy.init_node('imageToObjects', anonymous=True)

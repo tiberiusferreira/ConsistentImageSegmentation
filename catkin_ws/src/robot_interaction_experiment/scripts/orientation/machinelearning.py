@@ -11,34 +11,16 @@ import Queue
 import time
 import pylab as plot
 import tsne
+import copy
+import math
 
-recording = 0
 implements_p_fit = 0
-live_lrn_timer = 0
-nb_real_additional_classes = 0
-nb_reserved_classes = 20
 loaded_clf = 0
-img_clean_bgr_class = 0
-nb_depth_imgs_cache = 2  # default number of depth images to consider
-show_depth = False
-show_color = False
-val_depth_capture = 0.05
-depth_img_index = 0
-last_depth_imgs = list()
-number_last_points = 15
 hog_list = list()
-depth_img_avg = np.zeros((100, 100))
-img_bgr8_clean = np.zeros((100, 100))
-got_color = False
-got_depth = False
 labels = list()
 label = ''
-loaded = 0
-DEBUG = 0
-show = 0
 saving_learn = 0
-img_clean_bgr_learn = None
-img_clean_gray_class = None
+saving_test = 0
 saved = 0
 color = ''
 n_bin = 10  # 4 number of orientations for the HoG
@@ -46,7 +28,6 @@ b_size = 64  # 15  block size
 b_stride = 32
 c_size = 32  # 15  cell size
 rotation = -1
-saving_test = 0
 failure = 0
 total = 0
 tst_dsk_percentage = -1
@@ -55,58 +36,32 @@ shuffled_y = list()
 shuffled_x = list()
 live_cnt = 0
 hog_size = 0
-iterations = 0
+LRN_PATH = 'LRN_IMGS/'
+PARTIAL_LRN_PATH = 'PARTIAL_LRN/'
+TST_PATH = 'TST_IMGS/'
+PARTIAL_TST_PATH = 'PARTIAL_TST/'
 # clf = BaggingClassifier(svm.SVC(probability=True), n_estimators=division, max_samples=1.0/30)
 # clf = KNeighborsClassifier(n_neighbors=1000)
 # clf = svm.SVC(probability=True)
 clf = SGDClassifier(loss='log', random_state=10, shuffle=True)
 
 
-def learn_from_str(value):
-    print ("LIVE LEARNING!!")
-    global live
-    global live_cnt
-    global live_lrn_timer
-    global nb_depth_imgs_cache
-    global hog_list
-    global labels
-    global nb_real_additional_classes
-    global shuffled_x
-    global shuffled_y
-    global hog_size
-    global clf
-    global NM_SAMPLES
-    live = 1
-    # hog_list = list()
-    # labels = list()
-    i = 0
-    nb_real_additional_classes += 1
-    print (stored_imgs.qsize())
-    while not stored_imgs.empty():
-        i += 1
-        img_bgr8 = stored_imgs.get()
-        cv2.imshow("Learning " + str(i) + str(nb_real_additional_classes), img_bgr8)
-        cv2.waitKey(1)
-        learn_hog(img_bgr8)
-    print (Counter(labels))
-    learn(1)
-    print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
-    live = 0
-    return
+def show_gui():
+    window_name = 'Machine Learning'
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.createTrackbar('Save Learn', window_name, 0, 1, save_lrn_callback)
+    cv2.createTrackbar('Save Tst', window_name, 0, 1, save_tst_callback)
+    cv2.createTrackbar('Tst from disk', window_name, 0, 1, test_from_disk)
+    cv2.createTrackbar('Predict Label', window_name, 0, 1, hog_pred)
 
 
 
-def str_img(img):
-    global timer_str
-    # print ("Storing " + str(stored_imgs.qsize()) + ' ' + str(time.time()))
-    if (time.time()-timer_str) > 1:
-        print ("Cleaning queue")
-        while not stored_imgs.empty():
-            stored_imgs.get()
-    timer_str = time.time()
-    if stored_imgs.full():
-        stored_imgs.get()
-    stored_imgs.put(img)
+def save_lrn_callback(value):
+    save_imgs_learn(1)
+
+
+def save_tst_callback(value):
+    save_imgs_test(1)
 
 
 def learn_from_disk(value):
@@ -116,6 +71,8 @@ def learn_from_disk(value):
     global using_VGA
     i = 0
     for filename in os.listdir(LRN_PATH):
+        if not filename.endswith(".png"):
+            continue
         if (i % 20) == 0:
             start_time = time.time()
         label = filename.rsplit('_', 2)[0]
@@ -129,23 +86,12 @@ def learn_from_disk(value):
     print('Done')
 
 
-def check_str_imgs(value):
-    i = 0
-    while not stored_imgs.empty():
-        i += 1
-        cv2.imshow('Img' + str(i), stored_imgs.get())
-        cv2.waitKey(300)
-
-
 def hog_pred(value):
-    global n_bin
-    global b_size
-    global c_size
     global img_clean_bgr_class
-    fd = get_img_hog(img_clean_bgr_class)
+    well_oriented_img, confiance = get_img_to_be_sent(img_clean_bgr_class)
+    fd = get_img_hog(well_oriented_img)
     global clf
     print(clf.predict(fd))
-    # print(clf.predict_proba(fd))
     print(clf.predict_proba(fd)[0])
 
 
@@ -174,6 +120,7 @@ def load_hog(value):
     return 1
 
 
+'''Use this function to generate a 2D scatter plot representing the classes based on their HoGs using the TSNE lib'''
 def plot_2d_classes(value):
     global labels
     if 10 > len(labels):
@@ -184,7 +131,6 @@ def plot_2d_classes(value):
             return
     nm_elements = int(raw_input('Plot this many elements (up to ' + str(len(labels)) + ') : '))
     new_labels = list()
-    classes = list()
     classes = np.unique(labels).tolist()
     for labell in labels[:nm_elements]:
         for unique_label in classes:
@@ -193,18 +139,6 @@ def plot_2d_classes(value):
     y = tsne.tsne(np.array(hog_list[:nm_elements]))
     plot.scatter(y[:, 0], y[:, 1], 20, new_labels)
     plot.show()
-
-
-
-def show_imgs(value):
-    global show
-    show = value
-
-
-
-def debug(value):
-    global DEBUG
-    DEBUG = value
 
 
 def learn(value):
@@ -217,9 +151,6 @@ def learn(value):
     print('Learning')
     lrn_start_time = time.time()
     classes = np.unique(labels).tolist()
-    if implements_p_fit == 1:
-        for i in range(nb_reserved_classes):
-            classes.append('new' + str(i))
     print(classes)
     database_indexs = range(len(labels))
     if implements_p_fit == 1:
@@ -310,10 +241,8 @@ def get_img_to_be_sent(img):
 def check_stability(last_objs):
     last_objs_c = copy.copy(last_objs)
     obj_center_list = list()
-    my_center_list = list()
     nb_obj = 0
     stable = 1
-    sorted_by_first = list()
     for index, obj_snapshot in enumerate(last_objs_c):
         if index == 0:
             nb_obj = len(obj_snapshot)
@@ -322,31 +251,16 @@ def check_stability(last_objs):
                 # print ("Obj number not stable!")
                 stable = 0
                 return stable
-    # for index, obj_snapshot in enumerate(last_objs_c):  # for each period of time
-    #     for obj_index, obj_in_sameTime in enumerate(obj_snapshot):
-    #         img_bgr8_list, center_list = obj_in_sameTime    # for each obj in the same period of time
-    #         my_center_list.append(center_list)
-    #     sorted_by_second = sorted(my_center_list, key=lambda tup: tup[1])
-    #     sorted_by_first.append(sorted(sorted_by_second, key=lambda tup: tup[0]))
     for index, obj_snapshot in enumerate(last_objs_c):  # for each period of time
         sorted_by_second = sorted(obj_snapshot, key=lambda tup: tup[1][1])
         sorted_by_first = sorted(obj_snapshot, key=lambda tup: tup[1][0])
         last_objs_c[index] = sorted_by_first
-
-        # print ([x[1] for x in sorted_by_first]
-        # print ('\n')
-            # print (center_list)
-        # print (sorted_by_second)
     for obj in range(nb_obj):   # for each obj
         one_obj_center_hist = list()
         for index, obj_snapshot in enumerate(last_objs_c):  # for each time
             img_bgr8, center = obj_snapshot[obj]    # get a given obj in time
             one_obj_center_hist.append(center)      # append always the same obj in all times
         obj_center_list.append(one_obj_center_hist)
-    # for obj in range(nb_obj):
-        # sorted_by_second = sorted(obj_center_list, key=lambda tup: tup[1])
-        # print (obj_center_list)
-        # print ('\n')
     for obj in range(nb_obj):
         for one in range(7):
             x_one, y_one = obj_center_list[obj][one]
@@ -355,51 +269,37 @@ def check_stability(last_objs):
                 dist = math.sqrt(abs(x_one**2 - x_other**2) + abs(y_one**2 - y_other**2))
                 if dist > 200:
                     stable = 0
-    # print ('Stable = ' + str(stable))
     return stable
-    # print (obj_center_list)
-    # print ('\n')
 
 
-def learn_tuple(curr_tuple, obj_history):
-    img, center_targ = curr_tuple
-    print (center_targ)
-    indexx = 0
-    for snapshot in (obj_history[0], obj_history[4], obj_history[6]):
-        for objs in snapshot:
-            img, center = objs
-            dist = math.sqrt(abs(center_targ[0] ** 2 - center[0] ** 2) + abs(center_targ[1] ** 2 - center[1] ** 2))
-            if dist < 200:
-                str_img(img)
-                # cv2.imshow('Learn?' + str(indexx), img)
-                # cv2.waitKey(1)
-                # indexx += 1
+def setup():
+    global setup_done
+    if 'setup_done' not in globals():
+        setup_done = False
+    if not setup_done:
+        show_gui()
+        learn_from_disk(1)
+    setup_done = True
 
 
 def objects_detector(uprightrects_tuples):
-    global last_imgs
-    global img_clean_gray_class
-    global img_clean_bgr_class
-    global img_clean_bgr_learn
     global clf
-    global n_bin
-    global b_size
-    global c_size
     global saving_learn
-    global saved
     global saving_test
-    global live
-    global show
-    global got_speech
-    global speech
+    global saved
     global loaded_clf
     global using_VGA
     global iterations
-    global recording
     global obj_history
-    iterations += 1
-    detected_objects_list = []
-    objects_detector_time = time.time()
+    global img_clean_bgr_class
+    using_VGA = 0
+    setup()
+    if 'iterations' not in globals():
+        iterations = 0
+    else:
+        iterations += 1
+    if 'obj_history' not in globals():
+        obj_history = list()
     if len(obj_history) < 7:
         obj_history.append(uprightrects_tuples)
         return
@@ -408,80 +308,27 @@ def objects_detector(uprightrects_tuples):
         obj_history[index_last_obj] = uprightrects_tuples
     if check_stability(obj_history) == 0:
         return
-    # for indexx, snapshots in enumerate(obj_history):
-    #     # print (snapshots[0][0])
-    #     cv2.imshow('Good? ' + str(indexx), snapshots[0][0])
-    #     cv2.waitKey(1)
     uprightrects_tuples = obj_history[2]
+    final_imgs = list()
     for index, curr_tuple in enumerate(uprightrects_tuples):
         img_bgr8, center = curr_tuple
-        width, height, d = np.shape(img_bgr8)
         w, l, d = np.shape(img_bgr8)
         img_clean_bgr_learn = img_bgr8.copy()
+        if saving_learn == 1:
+            save_imgs_learn(img_clean_bgr_learn)
+            return
         if not using_VGA:
             img_bgr8 = img_bgr8[13:w - 5, 13:l - 8]
         else:
             img_bgr8 = img_bgr8[6:w - 2, 6:l - 4]
         img_clean_bgr_class = img_bgr8.copy()
-        img_clean_bgr_class = cv2.resize(img_clean_bgr_class, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
-        img_clr = cv2.resize(img_clean_bgr_learn, (128, 128))
-        # img_gray = cv2.resize(cv2.cvtColor(img_clean_bgr_learn, cv2.COLOR_BGR2GRAY), (128, 128))
-        # edges = cv2.Canny(img_gray, 40, 100)
-        # cv2.imshow('Edges', edges)
-        # cv2.imshow('img_gray', img_gray)
-        cv2.imshow('Clean' + str(index), img_clean_bgr_class)
-        if loaded_clf:
-            final, confiance = get_img_to_be_sent(img_clean_bgr_class)
-            if iterations % 50 == 0:
-                print (confiance)
-            # print("storing " + str(confiance))
-            if confiance < 0.85 and recording:
-                learn_tuple(curr_tuple, obj_history)
-                learn_from_str(1)
-                final = cv2.resize(img_clean_bgr_class, (256, 256))
-            # print("storing " + str(confiance))
-        if saving_learn == 1:
-            cv2.imshow('LEARN', img_clean_bgr_learn)
-            cv2.waitKey(1000)
-            save_imgs_learn(img_clean_bgr_learn)
         if saving_test == 1:
-            cv2.imshow('TEST', img_clean_bgr_class)
-            cv2.waitKey(1000)
             save_imgs_test(img_clean_bgr_class)
-        if show:
-            if loaded_clf == 0:
-                print("Classifier not fitted, trying to load one")
-                if load_classifier(1) == -1:
-                    print("Could not load it, quitting")
-            else:
-                cv2.imshow('Sent' + str(index), final)
-                cv2.waitKey(100)
-        # if got_speech == 0:
-        #     pass
-        # else:
-        if loaded_clf:
-            rows, cols, d = final.shape
-            detected_object = Detected_Object()
-            detected_object.id = 1
-            detected_object.image = CvBridge().cv2_to_imgmsg(final, encoding="passthrough")
-            detected_object.center_x = rows / 2
-            detected_object.center_y = cols / 2
-            detected_object.features.hog_histogram = get_img_hog(final)[0]
-            colors_histo, object_shape = getpixelfeatures(final)
-            detected_object.features.colors_histogram = colors_histo.tolist()
-            detected_object.features.shape_histogram = object_shape.tolist()
-            detected_objects_list.append(detected_object)
-            if recording == 1:
-                cv2.imshow('Just Sent' + str(index), final)
-
-    # if got_speech == 0:
-    #     return
-    if loaded_clf:
-        detected_objects_list_msg = Detected_Objects_List()
-        detected_objects_list_msg.detected_objects_list = detected_objects_list
-        detected_objects_list_publisher.publish(detected_objects_list_msg)
-    got_speech = 0
-    recording = 0
+            return
+        img_clean_bgr_class = cv2.resize(img_clean_bgr_class, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
+        final, confiance = get_img_to_be_sent(img_clean_bgr_class)
+        final_imgs.append(final)
+    return final_imgs
 
 
 def get_img_rot(img_bgr):
@@ -504,6 +351,7 @@ def get_img_rot(img_bgr):
 def get_img_hog(img_bgr):
     # img_gry = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     # img_gry = cv2.Canny(img_gry, 40, 100)
+    img_bgr = cv2.resize(img_bgr, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
     opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
     h1 = opencv_hog.compute(img_bgr)
     fd = np.reshape(h1, (len(h1),))
@@ -581,93 +429,6 @@ def learn_hog(img):
             labels.append('new' + str(nb_real_additional_classes))
 
 
-def partial_lrn_disk(value):
-    global label
-    global PARTIAL_LRN_PATH
-    global loaded_clf
-    global live
-    global live_cnt
-    global live_lrn_timer
-    global nb_depth_imgs_cache
-    global hog_list
-    global labels
-    global nb_real_additional_classes
-    global shuffled_x
-    global shuffled_y
-    global hog_size
-    global clf
-    live = 1
-    i = 0
-    # hog_list = list()
-    # labels = list()
-    for filename in os.listdir(PARTIAL_LRN_PATH):
-        if (i % 20) == 0:
-            start_time = time.time()
-        label = filename.rsplit('_', 2)[0]
-        image_read = cv2.imread(PARTIAL_LRN_PATH + filename)
-        learn_hog(image_read)
-        if (i % 20) == 0:
-            print('Elapsed Time Learning Image ' + str(i) + ' = ' + str(time.time() - start_time) + '\n')
-        i += 1
-        # shuffled_x.extend(hog_list)
-        # shuffled_y.extend(labels)
-    hog_list.extend(
-            shuffled_x[1:NM_SAMPLES])
-    labels.extend(
-            shuffled_y[1:NM_SAMPLES])
-    learn(1)
-    live = 0
-    loaded_clf = 1
-    print('Done')
-    return
-
-
-def partial_test_from_disk(value):
-    print('Testing from disk')
-    start_time = time.time()
-    global PARTIAL_TST_PATH
-    global label
-    global rotation
-    global total
-    global tst_dsk_percentage
-    total = 0
-    global failure
-    global lowest_conf
-    failure = 0
-    lowest_conf = 1000
-    for filename in os.listdir(PARTIAL_TST_PATH):
-        total += 1
-        if (total % 20) == 0:
-            start_time = time.time()
-        label = filename.rsplit('_', 3)[0]
-        rotation = int(filename.rsplit('_', 3)[1])
-        image = cv2.imread(PARTIAL_TST_PATH + filename)
-        image = cv2.resize(image, (128, 128))
-        found_rot, confiance = get_img_rot(image)
-        # if confiance < 0.9:
-        #     print (confiance)
-        #     cv2.imshow('unsure', image)
-        #     cv2.waitKey(1000)
-        if confiance < lowest_conf:
-            lowest_conf = confiance
-        if confiance < 0.68:
-            print (confiance)
-            cv2.imshow('LowConf', image)
-            cv2.waitKey(100)
-        if not abs(rotation - found_rot) < 0.5:
-            failure += 1
-            # cv2.imshow('MISTAKE', image)
-            # cv2.waitKey(1000)
-        if (total % 20) == 0:
-            print('Elapsed Time Testing Image ' + str(total) + ' = ' + str(time.time() - start_time) + '\n')
-    tst_dsk_percentage = 100 * failure / total
-    print('Failure = ' + str(tst_dsk_percentage) + '%')
-    print('Failures = ' + str(failure))
-    print('Elapsed Time Testing = ' + str(time.time() - start_time) + '\n')
-    print ("Lowest conf = " + str(lowest_conf))
-    print('Done')
-
-
 def test_from_disk(value):
     print('Testing from disk')
     start_time = time.time()
@@ -683,6 +444,8 @@ def test_from_disk(value):
     global lowest_conf
     lowest_conf = 10000
     for filename in os.listdir(TST_PATH):
+        if not filename.endswith(".png"):
+            continue
         total += 1
         if (total % 20) == 0:
             start_time = time.time()
@@ -717,12 +480,7 @@ def test_from_disk(value):
     print('Done')
 
 
-
-def record(value):
-    global recording
-    recording = 1
-
-
+'''Function used to try different HoG parameters'''
 def big_test(value):
     global n_bin
     global b_size  # Align to cell size
@@ -764,7 +522,6 @@ def big_test(value):
         failure = failure_tot
         tst_dsk_percentage = tst_dsk_percentage_tot
         tst_dsk_percentage_tot = 0
-        tst_dsk_percentage_tot = 0
         with open('HoG_Trials.txt', 'a') as the_file:
             the_file.write('n_bin = ' + str(n_bin) + '\n')
             the_file.write('b_size = ' + str(b_size) + '\n')
@@ -782,44 +539,18 @@ def big_test(value):
     print('Big Test Done')
 
 
-def getpixelfeatures(object_img_bgr8):
-    object_img_bgr8 = cv2.resize(object_img_bgr8, (30, 30))
-    object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
-    # gets the color histogram divided in N_COLORS "categories" with range 0-179
-    colors_histo, histo_bins = np.histogram(object_img_hsv[:, :, 0], bins=N_COLORS, range=(0, 179))
-    colors_histo[0] -= len(np.where(object_img_hsv[:, :, 1] == 0)[0])
-    half_segment = int(N_COLORS / 4)
-    middle = colors_histo * np.array([0.0] * half_segment + [1.0] * 2 * half_segment + [0.0] * half_segment)
-    sigma = 2.0
-    middle = ndimage.filters.gaussian_filter1d(middle, sigma)
-    exterior = colors_histo * np.array([1.0] * half_segment + [0.0] * 2 * half_segment + [1.0] * half_segment)
-    exterior = np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
-    exterior = ndimage.filters.gaussian_filter1d(exterior, sigma)
-    colors_histo = middle + np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
-    colors_histo = colors_histo / float(np.sum(colors_histo))
-    object_shape = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2GRAY)
-    object_shape = np.ndarray.flatten(object_shape)
-    sum = float(np.sum(object_shape))
-    if sum != 0:
-        object_shape = object_shape / float(np.sum(object_shape))
-    features = Vision_Features()
-    # features.colors_histogram = colors_histo
-    # features.shape_histogram = object_shape
-    return colors_histo, object_shape
-
-
-
 def save_imgs_learn(value):
     global label
     global color
     global saving_learn
+    global LRN_PATH
     global saved
     if isinstance(value, int):
         label = str(raw_input('Label: '))
         color = str(raw_input('Color: '))
         saving_learn = 1
     else:
-        cv2.imwrite('PARTIAL_LRN_NOTEBOOK/' + label + '_' + str(saved) + '_' + color + '.png', value)
+        cv2.imwrite(LRN_PATH + label + '_' + str(saved) + '_' + color + '.png', value)
         saved += 1
         print(saved)
         if saved == 3:
@@ -851,3 +582,4 @@ def save_imgs_test(value):
             saving_test = 0
             saved = 0
             print('Done saving')
+
