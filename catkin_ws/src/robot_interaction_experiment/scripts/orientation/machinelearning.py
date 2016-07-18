@@ -1,49 +1,23 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import division
-
-import rospy
-import numpy as np
-from scipy import ndimage
-from cv_bridge import CvBridge, CvBridgeError
-from sensor_msgs.msg import Image
-from robot_interaction_experiment.msg import Vision_Features
-from robot_interaction_experiment.msg import Detected_Object
-from robot_interaction_experiment.msg import Detected_Objects_List
-from robot_interaction_experiment.msg import Audition_Features
 from sklearn.linear_model import SGDClassifier
+import numpy as np
+import os
+import random
 from collections import Counter
 import joblib
 import os
 import cv2
 import pickle
 import Queue
-import random
 import time
-import pylab as Plot
+import pylab as plot
 import tsne
-import copy
-import math
-import threading
-from sklearn.decomposition import PCA
-####################
-# Constants max HoG size = 900  #
-####################
 
-MAIN_WINDOW_NAME = "Segmentator"
-MIN_AREA = 9000  # minimal area to consider a desirable object
-MAX_AREA = 15000  # maximal area to consider a desirable object
-N_COLORS = 80  # number of colors to consider when creating the image descriptor
-LRN_PATH = 'LRN_IMGS/'
-PARTIAL_LRN_PATH = 'PARTIAL_LRN/'
-TST_PATH = 'TST_IMGS/'
-PARTIAL_TST_PATH = 'PARTIAL_TST/'
-
-####################
-# Global variables #
-####################
-
+recording = 0
+implements_p_fit = 0
+live_lrn_timer = 0
+nb_real_additional_classes = 0
+nb_reserved_classes = 20
+loaded_clf = 0
 img_clean_bgr_class = 0
 nb_depth_imgs_cache = 2  # default number of depth images to consider
 show_depth = False
@@ -83,267 +57,43 @@ live_cnt = 0
 hog_size = 0
 iterations = 0
 # clf = BaggingClassifier(svm.SVC(probability=True), n_estimators=division, max_samples=1.0/30)
-clf = SGDClassifier(loss='log', random_state=10, shuffle=True)
 # clf = KNeighborsClassifier(n_neighbors=1000)
 # clf = svm.SVC(probability=True)
-recording = 0
-implements_p_fit = 0
-live_lrn_timer = 0
-nb_real_additional_classes = 0
-nb_reserved_classes = 20
-loaded_clf = 0
-speech = ''
-got_speech = 0
-img_buffer = list()
-stored_imgs = Queue.LifoQueue(3)
-obj_history = list()
-new_rgb = 0
-timer_str = 0
-random.seed(10)
-new_obj_timer = time.time()
-using_VGA = 0
-lowest_conf = 0
-last_upright = list()
-interactions_get_cube = 0
-last_imgs = list()
-clr_timestamp = 0
-depth_timestamp = 0
-last_clr_timestamp = 0
-distance = 0
-x = 0
-y = 0
-refPt = list()
-last_depth_timestamp = 0
-cropping = False
-rgb_lock = threading.Lock()
-depth_lock = threading.Lock()
-treatment_lock = threading.Lock()
+clf = SGDClassifier(loss='log', random_state=10, shuffle=True)
 
 
-def save_imgs_learn(value):
-    global label
-    global color
-    global saving_learn
-    global saved
-    if isinstance(value, int):
-        mode = str(raw_input('Label: '))
-        label = mode
-        color_ = str(raw_input('Color: '))
-        color = color_
-        saving_learn = 1
-    else:
-        cv2.imwrite('PARTIAL_LRN_NOTEBOOK/' + label + '_' + str(saved) + '_' + color + '.png', value)
-        saved += 1
-        print(saved)
-        if saved == 3:
-            saving_learn = 0
-            saved = 0
-            print('Done saving')
-
-
-def save_imgs_test(value):
-    global label
-    global color
-    global rotation
-    global saving_test
-    global TST_PATH
-    global saved
-    if isinstance(value, int):
-        mode = str(raw_input('Label: '))
-        label = mode
-        color_ = str(raw_input('Color: '))
-        color = color_
-        rotation = str(raw_input('Rotation: '))
-        saving_test = 1
-    else:
-        cv2.imwrite(TST_PATH + label + '_' + str(rotation) + '_' +
-                    str(saved) + '_' + color + '.png', value)
-        saved += 1
-        print(saved)
-        if saved == 20:
-            saving_test = 0
-            saved = 0
-            print('Done saving')
-
-
-def depththreshold(n):
-    global val_depth_capture
-    if n == 0:
-        n = 1
-    val_depth_capture = float(n) / 100
-
-
-def change_nb_depth_imgs(n):
+def learn_from_str(value):
+    print ("LIVE LEARNING!!")
+    global live
+    global live_cnt
+    global live_lrn_timer
     global nb_depth_imgs_cache
-    nb_depth_imgs_cache = n
-    if nb_depth_imgs_cache <= 0:
-        nb_depth_imgs_cache = 1
-
-
-def show_depth_imgs(b):
-    global show_depth
-    if b == 1:
-        show_depth = True
-    else:
-        show_depth = False
-
-
-def show_clr_imgs(b):
-    global show_color
-    if b == 1:
-        show_color = True
-    else:
-        show_color = False
-
-
-def clean(img, n):
-    # set the non-finite values (NaN, inf) to n
-    # returns 1 where the img is finite and 0 where it is not
-    mask = np.isfinite(img)
-    #  where mask puts img, else puts n, so where is finite puts img, else puts n
-    return np.where(mask, img, n)
-
-
-def callback_depth(msg):
-    depth_lock.acquire()
-    # treating the image containing the depth data
-    global depth_img_index, last_depth_imgs, depth_img_avg, depth_timestamp
-    # getting the image
-    try:
-        img = CvBridge().imgmsg_to_cv2(msg, "passthrough")
-    except CvBridgeError as e:
-        print(e)
-        return
-    cleanimage = clean(img, 255)
-    if show_depth:
-        # shows the image after processing
-        cv2.imshow("Depth", cleanimage)
+    global hog_list
+    global labels
+    global nb_real_additional_classes
+    global shuffled_x
+    global shuffled_y
+    global hog_size
+    global clf
+    global NM_SAMPLES
+    live = 1
+    # hog_list = list()
+    # labels = list()
+    i = 0
+    nb_real_additional_classes += 1
+    print (stored_imgs.qsize())
+    while not stored_imgs.empty():
+        i += 1
+        img_bgr8 = stored_imgs.get()
+        cv2.imshow("Learning " + str(i) + str(nb_real_additional_classes), img_bgr8)
         cv2.waitKey(1)
-    else:
-        cv2.destroyWindow("Depth")
-    if not using_VGA:
-        cleanimage = cv2.resize(cleanimage, (1280, 960))
-    last_depth_imgs.append(copy.copy(cleanimage))
-    depth_img_avg = np.array([sum(e) / len(e) for e in zip(*last_depth_imgs)])
-    if len(last_depth_imgs) == 3:
-        last_depth_imgs = list()
-    depth_img_index += 1
-    depth_timestamp = msg.header.stamp
-    depth_lock.release()
+        learn_hog(img_bgr8)
+    print (Counter(labels))
+    learn(1)
+    print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
+    live = 0
+    return
 
-
-def cut_working_area(clr_img, depth_img):
-    global refPt
-    if not len(refPt) == 2:
-        print("Selecting working region")
-        window_name = 'Select Region'
-        cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
-        cv2.imshow(window_name, clr_img)
-        cv2.setMouseCallback(window_name, click_and_crop)
-        while not len(refPt) == 2:
-            cv2.waitKey(50)
-        cv2.destroyWindow(window_name)
-    clr_img = clr_img[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
-    depth_img = depth_img[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]
-    return clr_img, depth_img
-
-
-def begin_treatment():
-    treatment_lock.acquire()
-    global depth_timestamp, clr_timestamp, last_clr_timestamp, last_depth_timestamp, depth_img_avg, refPt, \
-        img_bgr8_clean
-    img_bgr8_clean_copy = img_bgr8_clean.copy()
-    depth_img_avg_copy = depth_img_avg.copy()
-    print (depth_timestamp)
-    print (clr_timestamp)
-    print (last_clr_timestamp)
-    print (last_depth_timestamp)
-    if not depth_timestamp == 0 and not clr_timestamp == 0 and not clr_timestamp == last_clr_timestamp\
-            and not depth_timestamp == last_depth_timestamp:
-        last_clr_timestamp = clr_timestamp
-        last_depth_timestamp = depth_timestamp
-        img_bgr8_clean_copy, depth_img_avg_copy = cut_working_area(img_bgr8_clean_copy, depth_img_avg_copy)
-        Sobelx = cv2.Sobel(img_bgr8_clean_copy, -1, 1, 0, ksize=1)
-        Sobely = cv2.Sobel(img_bgr8_clean_copy, -1, 0, 1, ksize=1)
-        Sobel = Sobelx + Sobely
-        img_bgr8_clean_copy = Sobel
-        img_bgr8_clean_copy = cv2.cvtColor(img_bgr8_clean_copy, cv2.COLOR_BGR2GRAY)
-        # img_bgr8_clean_copy = cv2.GaussianBlur(img_bgr8_clean_copy, (5, 5), 0)
-        ret3, img_bgr8_clean_copy = cv2.threshold(img_bgr8_clean_copy, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        # cv2.imshow('Result', img_bgr8_clean_copy)
-        # cv2.waitKey(1)
-        data = list()
-        row, col = np.shape(img_bgr8_clean_copy)
-        for x in range(row):
-            for y in range(col):
-                if img_bgr8_clean_copy[x][y] > 0:
-                    data.append([x, y])
-        # print (data)
-        X = data
-        pca = PCA(n_components=2)
-        pca.fit(X)
-        # print (pca.components_)
-        # img_row = np.reshape(img_bgr8_clean_copy,(-1))
-        # _, eigenvectors = cv2.PCACompute(img_bgr8_clean_copy, np.array([]))
-        # print (eigenvectors)
-        # print ('Got PCA')
-        img_bgr8_clean_copy = cv2.cvtColor(img_bgr8_clean_copy, cv2.COLOR_GRAY2BGR)
-        # print ('Drawing line')
-        pca_comp = pca.components_*100
-        print (np.shape(pca_comp))
-        cv2.line(img_bgr8_clean_copy, (int(pca_comp[0][0]), int(pca_comp[0][1])), (int(pca_comp[1][0]), int(pca_comp[1][1])), (255, 0, 0), 5)
-        cv2.imshow('RGB_img', img_bgr8_clean_copy)
-        cv2.waitKey(1)
-        # print(eigenvectors)
-
-        # print (str(math.atan2(eigenvectors[0][1], eigenvectors[0][0])) + " | " + str(
-        #     math.atan2(eigenvectors[1][1], eigenvectors[1][0])))
-
-        # while x == 0 or y == 0:
-        #     cv2.waitKey(1)
-        # cv2.waitKey(0)
-        # get_cube_upright()
-    treatment_lock.release()
-
-
-def callback_rgb(msg):
-    # print ('New rgb')
-    rgb_lock.acquire()
-    global using_VGA, clr_timestamp, img_bgr8_clean, got_color
-    # processing of the color image
-    # getting image
-    try:
-        img = CvBridge().imgmsg_to_cv2(msg, "bgr8")
-    except CvBridgeError as e:
-        print(e)
-        rgb_lock.release()
-        return
-    if not using_VGA:
-        img = img[32:992, 0:1280]  # crop the image because it does not have the same aspect ratio of the depth one
-    img_bgr8_clean = img
-    clr_timestamp = msg.header.stamp
-    if show_color:
-        # show image obtained
-        cv2.imshow("couleur", img_bgr8_clean)
-        cv2.waitKey(1)
-    else:
-        cv2.destroyWindow("couleur")
-    # print ('New rgb saved')
-    rgb_lock.release()
-
-
-'''
-Callback from the audio related topic. Receives the current dictionary, words histogram and last spoken words (speech).
-'''
-
-
-def callback_audio_recognition(words):
-    global speech
-    global got_speech
-    if not words.complete_words:
-        return
-    speech = words.complete_words
-    got_speech = 1
 
 
 def str_img(img):
@@ -359,114 +109,32 @@ def str_img(img):
     stored_imgs.put(img)
 
 
+def learn_from_disk(value):
+    global label
+    global LRN_PATH
+    global loaded_clf
+    global using_VGA
+    i = 0
+    for filename in os.listdir(LRN_PATH):
+        if (i % 20) == 0:
+            start_time = time.time()
+        label = filename.rsplit('_', 2)[0]
+        image_read = cv2.imread(LRN_PATH + filename)
+        learn_hog(image_read)
+        if (i % 200) == 0:
+            print('Elapsed Time HoGing Image ' + str(i) + ' = ' + str(time.time() - start_time) + '\n')
+        i += 1
+    learn(1)
+    loaded_clf = 1
+    print('Done')
+
+
 def check_str_imgs(value):
     i = 0
     while not stored_imgs.empty():
         i += 1
         cv2.imshow('Img' + str(i), stored_imgs.get())
         cv2.waitKey(300)
-
-
-def click_and_crop(event, x, y, flags, param):
-    # grab references to the global variables
-    global refPt, cropping
-
-    # if the left mouse button was clicked, record the starting
-    # (x, y) coordinates and indicate that cropping is being
-    # performed
-    if event == cv2.EVENT_LBUTTONDOWN:
-        refPt = [(x, y)]
-        cropping = True
-
-    # check to see if the left mouse button was released
-    elif event == cv2.EVENT_LBUTTONUP:
-        # record the ending (x, y) coordinates and indicate that
-        # the cropping operation is finished
-        refPt.append((x, y))
-        cropping = False
-
-
-def get_cube_upright():
-    # Uses the depth image to only take the part of the image corresponding to the closest point and a bit further
-    global depth_img_avg
-    global rect_list
-    global img_bgr8_clean
-    global using_VGA
-    global last_upright
-    global interactions_get_cube
-    global distance
-    global depth_img_avg_cp
-    img_bgr8_clean_copy = img_bgr8_clean.copy()
-    # resize the depth image so it matches the color one
-    depth_img_avg_cp = copy.copy(depth_img_avg)
-    closest_pnt = np.amin(depth_img_avg)
-    # print ('from amin = ' + str(closest_pnt))
-    # closest_pnt = depth_img_avg_cp[x, y]
-    # print ( ' From clicked = ' + str(closest_pnt))
-    # generate a mask with the closest points
-    img_detection = np.where(depth_img_avg_cp < closest_pnt + val_depth_capture, depth_img_avg_cp, 0)
-    # put all the pixels greater than 0 to 255
-    ret, mask = cv2.threshold(img_detection, 0.0, 255, cv2.THRESH_BINARY)
-    # convert to 8-bit
-    mask = np.array(mask, dtype=np.uint8)
-    im2, contours, hierarchy = cv2.findContours(mask, 1, 2, offset=(0, -6))
-    useful_cnts = list()
-    uprightrects_tuples = list()
-    all_upright = list()
-    for cnt in contours:
-        if not using_VGA:
-            if 8500 < cv2.contourArea(cnt) < 16000:
-                if 400 < cv2.arcLength(cnt, 1) < 640:
-                    useful_cnts.append(cnt)
-                else:
-                    # print("Wrong Lenght 400 < " + str(cv2.arcLength(cnt, 1)) + str(" < 640"))
-                    continue
-            else:
-                # print ("Wrong Area: 9000 < " + str(cv2.contourArea(cnt)) + " < 15000")
-                continue
-        else:
-            if 2500 < cv2.contourArea(cnt) < 15000:
-                if 210 < cv2.arcLength(cnt, 1) < 280:
-                    useful_cnts.append(cnt)
-                else:
-                    # print("Wrong Lenght 210 < " + str(cv2.arcLength(cnt, 1)) + str(" < 280"))
-                    continue
-            else:
-                # print("Wrong Area: 2500 < " + str(cv2.contourArea(cnt)) + " < 15000")
-                continue
-    for index, cnts in enumerate(useful_cnts):
-        min_area_rect = cv2.minAreaRect(cnts)  # minimum area rectangle that encloses the contour cnt
-        (center, size, angle) = cv2.minAreaRect(cnts)
-        width, height = size[0], size[1]
-        if not (0.65*height < width < 1.35*height):
-            print("Wrong Height/Width: " + str(0.65*height) + " < " + str(width) + " < " + str(1.35*height))
-            continue
-        points = cv2.boxPoints(min_area_rect)  # Find four vertices of rectangle from above rect
-        points = np.int32(np.around(points))  # Round the values and make it integers
-        cv2.drawContours(img_bgr8_clean_copy, [points], 0, (0, 0, 255), 2)
-        cv2.drawContours(img_bgr8_clean_copy, cnts, -1, (255, 0, 255), 2)
-        cv2.waitKey(1)
-        # if we rotate more than 90 degrees, the width becomes height and vice-versa
-        if angle < -45.0:
-            angle += 90.0
-            width, height = size[0], size[1]
-            size = (height, width)
-        rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-        # rotate the entire image around the center of the parking cell by the
-        # angle of the rotated rect
-        imgwidth, imgheight = (img_bgr8_clean.shape[0], img_bgr8_clean.shape[1])
-        rotated = cv2.warpAffine(img_bgr8_clean, rot_matrix, (imgheight, imgwidth), flags=cv2.INTER_CUBIC)
-        # extract the rect after rotation has been done
-        sizeint = (np.int32(size[0]), np.int32(size[1]))
-        uprightrect = cv2.getRectSubPix(rotated, sizeint, center)
-        uprightrect = cv2.resize(uprightrect, (125, 125))
-        uprightrect_copy = uprightrect.copy()
-        uprightrect_copy = np.reshape(uprightrect_copy, (-1))
-        uprightrects_tuples.append((uprightrect, center))
-    cv2.imshow('RBG', img_bgr8_clean_copy)
-    cv2.waitKey(1)
-    if len(uprightrects_tuples) > 0:
-        objects_detector(uprightrects_tuples)
 
 
 def hog_pred(value):
@@ -523,13 +191,15 @@ def plot_2d_classes(value):
             if unique_label == labell:
                 new_labels.append(classes.index(unique_label))
     y = tsne.tsne(np.array(hog_list[:nm_elements]))
-    Plot.scatter(y[:, 0], y[:, 1], 20, new_labels)
-    Plot.show()
+    plot.scatter(y[:, 0], y[:, 1], 20, new_labels)
+    plot.show()
+
 
 
 def show_imgs(value):
     global show
     show = value
+
 
 
 def debug(value):
@@ -616,39 +286,6 @@ def hog_info(value):
     print("Single HoG size: ")
     print(len(hog_list[0]))
     print (Counter(labels))
-
-
-def learn_from_str(value):
-    print ("LIVE LEARNING!!")
-    global live
-    global live_cnt
-    global live_lrn_timer
-    global nb_depth_imgs_cache
-    global hog_list
-    global labels
-    global nb_real_additional_classes
-    global shuffled_x
-    global shuffled_y
-    global hog_size
-    global clf
-    global NM_SAMPLES
-    live = 1
-    # hog_list = list()
-    # labels = list()
-    i = 0
-    nb_real_additional_classes += 1
-    print (stored_imgs.qsize())
-    while not stored_imgs.empty():
-        i += 1
-        img_bgr8 = stored_imgs.get()
-        cv2.imshow("Learning " + str(i) + str(nb_real_additional_classes), img_bgr8)
-        cv2.waitKey(1)
-        learn_hog(img_bgr8)
-    print (Counter(labels))
-    learn(1)
-    print('Elapsed Time TOTAL = ' + str(time.time() - live_lrn_timer) + ' FPS = ' + str(100 / (time.time() - live_lrn_timer)) + '\n')
-    live = 0
-    return
 
 
 def get_img_to_be_sent(img):
@@ -1080,25 +717,6 @@ def test_from_disk(value):
     print('Done')
 
 
-def learn_from_disk(value):
-    global label
-    global LRN_PATH
-    global loaded_clf
-    global using_VGA
-    i = 0
-    for filename in os.listdir(LRN_PATH):
-        if (i % 20) == 0:
-            start_time = time.time()
-        label = filename.rsplit('_', 2)[0]
-        image_read = cv2.imread(LRN_PATH + filename)
-        learn_hog(image_read)
-        if (i % 200) == 0:
-            print('Elapsed Time HoGing Image ' + str(i) + ' = ' + str(time.time() - start_time) + '\n')
-        i += 1
-    learn(1)
-    loaded_clf = 1
-    print('Done')
-
 
 def record(value):
     global recording
@@ -1190,44 +808,46 @@ def getpixelfeatures(object_img_bgr8):
     return colors_histo, object_shape
 
 
-if __name__ == '__main__':
-    rospy.init_node('imageToObjects', anonymous=True)
-    print("Creating windows")
-    cv2.namedWindow(MAIN_WINDOW_NAME, cv2.WINDOW_NORMAL)
 
-    cv2.createTrackbar('Show', MAIN_WINDOW_NAME, 0, 1, show_imgs)
-    cv2.createTrackbar("Show Color Image", MAIN_WINDOW_NAME, 0, 1, show_clr_imgs)
-    cv2.createTrackbar("Show Depth Image", MAIN_WINDOW_NAME, 0, 1, show_depth_imgs)
-    cv2.createTrackbar('Learn from disk', MAIN_WINDOW_NAME, 0, 1, learn_from_disk)
-    cv2.createTrackbar('Test from disk', MAIN_WINDOW_NAME, 0, 1, test_from_disk)
-    # cv2.createTrackbar('Partial Learn Disk', MAIN_WINDOW_NAME, 0, 1, complete_lrn_disk)
-    cv2.createTrackbar('Partial TST', MAIN_WINDOW_NAME, 0, 1, partial_test_from_disk)
-    cv2.createTrackbar('Save IMGs Learn', MAIN_WINDOW_NAME, 0, 1, save_imgs_learn)
-    cv2.createTrackbar('Save IMGs Test', MAIN_WINDOW_NAME, 0, 1, save_imgs_test)
-    cv2.createTrackbar('Info HoG', MAIN_WINDOW_NAME, 0, 1, hog_info)
-    cv2.createTrackbar('Save HoG to Disk', MAIN_WINDOW_NAME, 0, 1, save_hog)
-    cv2.createTrackbar('Learn HoG stored in Memory', MAIN_WINDOW_NAME, 0, 1, learn)
-    cv2.createTrackbar('Load HoG', MAIN_WINDOW_NAME, 0, 1, load_hog)
-    cv2.createTrackbar('Save Classifier', MAIN_WINDOW_NAME, 0, 1, save_classifier)
-    cv2.createTrackbar('Load Classifier', MAIN_WINDOW_NAME, 0, 1, load_classifier)
-    cv2.createTrackbar('Check Queue', MAIN_WINDOW_NAME, 0, 1, check_str_imgs)
-    cv2.createTrackbar('Plot Classes as 2D', MAIN_WINDOW_NAME, 0, 1, plot_2d_classes)
-    cv2.createTrackbar('Debug', MAIN_WINDOW_NAME, 0, 1, debug)
-    cv2.createTrackbar('Predict HoG', MAIN_WINDOW_NAME, 0, 1, hog_pred)
-    cv2.createTrackbar('Recording', MAIN_WINDOW_NAME, 0, 1, record)
-    cv2.imshow(MAIN_WINDOW_NAME, 0)
-    print("Creating subscribers")
-    image_sub_rgb = rospy.Subscriber("/camera/rgb/image_raw", Image, callback_rgb, queue_size=1)
-    image_sub_depth = rospy.Subscriber("/camera/depth/image/", Image, callback_depth, queue_size=1)
-    detected_objects_list_publisher = rospy.Publisher('detected_objects_list', Detected_Objects_List, queue_size=1)
-    object_sub = rospy.Subscriber("audition_features", Audition_Features, callback_audio_recognition)
-    print("Spinning ROS")
-    time.sleep(1)
-    try:
-        while not rospy.core.is_shutdown():
-            time.sleep(0.2)
-            begin_treatment()
-    except KeyboardInterrupt:
-        print("Shutting down")
-        exit(1)
-        cv2.destroyAllWindows()
+def save_imgs_learn(value):
+    global label
+    global color
+    global saving_learn
+    global saved
+    if isinstance(value, int):
+        label = str(raw_input('Label: '))
+        color = str(raw_input('Color: '))
+        saving_learn = 1
+    else:
+        cv2.imwrite('PARTIAL_LRN_NOTEBOOK/' + label + '_' + str(saved) + '_' + color + '.png', value)
+        saved += 1
+        print(saved)
+        if saved == 3:
+            saving_learn = 0
+            saved = 0
+            print('Done saving')
+
+
+def save_imgs_test(value):
+    global label
+    global color
+    global rotation
+    global saving_test
+    global TST_PATH
+    global saved
+    if isinstance(value, int):
+        mode = str(raw_input('Label: '))
+        label = mode
+        color_ = str(raw_input('Color: '))
+        color = color_
+        rotation = str(raw_input('Rotation: '))
+        saving_test = 1
+    else:
+        cv2.imwrite(TST_PATH + label + '_' + str(rotation) + '_' +
+                    str(saved) + '_' + color + '.png', value)
+        saved += 1
+        print(saved)
+        if saved == 20:
+            saving_test = 0
+            saved = 0
+            print('Done saving')
