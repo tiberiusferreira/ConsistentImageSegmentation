@@ -216,11 +216,11 @@ def begin_treatment():
 
 
 def orientate_imgs(imgs_n_centers):
-    # Does not really work, just to visualize 'why' is does not work
+    # Does not really work, just to visualize 'why' is does not work and maybe expand it
     # min_area_triang.objects_detector(imgs_n_centers)
-    pca.apply_sobel(imgs_n_centers)
+    # pca.apply_sobel(imgs_n_centers)
 
-    # final_imgs = machinelearning.objects_detector(imgs_n_centers)
+    final_imgs = machinelearning.objects_detector(imgs_n_centers)
     # if final_imgs is None or len(final_imgs) == 0:
     #     return
     # for index, img in enumerate(final_imgs):
