@@ -11,7 +11,7 @@ if __name__ == '__main__':
     PREFIX = '../TST_RES/'
     TST_PATH = 'TST_IMGS/'
     for imgs in os.listdir(TST_PATH):
-        if not imgs.endswith(".png") or not imgs.startswith("cake"):
+        if not imgs.endswith(".png") or not imgs.startswith("dog_0_10_lightblue"):
             continue
         print ('Doing: ' + str(imgs))
     # for imgs in ('bird_rot0.png', 'bird_rot1.png', 'bird_rot2.png', 'bird_rot3.png', 'fish_rot0.png', 'fish_rot1.png', 'fish_rot2.png', 'fish_rot3.png', 'clipincl1.png', 'clipincl2.png', 'clip2.png', 'clip2inv.png', 'cake1.png', 'cake2.png','cake3.png', 'frog_rot0.png', 'frog_rot1.png', 'frog_rot2.png', 'frog_rot3.png'):
@@ -20,25 +20,32 @@ if __name__ == '__main__':
         # img = img[15:w - 7, 15:l - 10]
         img = cv2.resize(img, (400, 400))
         img_rotated = pca.apply_pca_rotation(img.copy())
-        imgs_sift = features_based.sifts_up(img_rotated, 0)
-        imgs_cnt = features_based.countourpnts_up(img_rotated)
-        # cv2.imwrite('Original_' + str(imgs), pca.draw_axis(img, False))
+        upright, upleft, downright, downleft = features_based.sifts_location(img_rotated, 1)
+        features_draw = features_based.draw_sift(img_rotated)
+        cv2.putText(features_draw,  str(format(upright+upleft, '.3f')), (200, 200-60), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(features_draw, str(format(downright+downleft, '.3f')), (200, 200+60), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.imwrite('Sift_resp.png', features_draw)
 
-        cv2.imwrite(PREFIX + 'Thresh_' + str(imgs), pca.threshold_img(img))
-        cv2.imwrite(PREFIX + 'PCA_' + str(imgs), pca.draw_axis(img_rotated, False))
-        # cv2.imshow('PCA_' + str(imgs), img_rotated)
-        cv2.imwrite(PREFIX + 'Sift_' + str(imgs), imgs_sift)
-        cv2.imwrite(PREFIX + 'Cnts_' + str(imgs), imgs_cnt)
-        # cv2.waitKey(0)
-
-        # cv2.imwrite('Rot ' + str(imgs), img_rotated)
-        # cv2.imshow('Rot ' + str(imgs), img_rotated)
-        # cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        # img_axis = pca.draw_axis(img.copy(), dgb=False)
-        # pca.plot_img_data(pca.threshold_img(img))
-
-        cv2.imwrite(PREFIX + 'Axis_' + str(imgs), pca.draw_axis(img, False))
+        cv2.waitKey(0)
+        # imgs_sift = features_based.sifts_up(img_rotated, 0)
+        # imgs_cnt = features_based.countourpnts_up(img_rotated)
+        # # cv2.imwrite('Original_' + str(imgs), pca.draw_axis(img, False))
+        #
+        # cv2.imwrite(PREFIX + 'Thresh_' + str(imgs), pca.threshold_img(img))
+        # cv2.imwrite(PREFIX + 'PCA_' + str(imgs), pca.draw_axis(img_rotated, False))
+        # # cv2.imshow('PCA_' + str(imgs), img_rotated)
+        # cv2.imwrite(PREFIX + 'Sift_' + str(imgs), imgs_sift)
+        # cv2.imwrite(PREFIX + 'Cnts_' + str(imgs), imgs_cnt)
+        # # cv2.waitKey(0)
+        #
+        # # cv2.imwrite('Rot ' + str(imgs), img_rotated)
+        # # cv2.imshow('Rot ' + str(imgs), img_rotated)
+        # # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        # # img_axis = pca.draw_axis(img.copy(), dgb=False)
+        # # pca.plot_img_data(pca.threshold_img(img))
+        #
+        # cv2.imwrite(PREFIX + 'Axis_' + str(imgs), pca.draw_axis(img, False))
         # cv2.imshow('Axis ' + str(imgs), img_axis)
         # cv2.waitKey(0)
     cv2.waitKey(0)

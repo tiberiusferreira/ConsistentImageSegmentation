@@ -5,9 +5,10 @@ import pca
 
 # gets an bgr8 image and returns how many sifts are in (upright, upleft, downright, downleft) parts of the image
 def sifts_location(img_bgr8, use_response):
-    row, col, d = np.shape(img_bgr8)
+    gray = cv2.cvtColor(img_bgr8, cv2.COLOR_BGR2GRAY)
+    row, col = np.shape(gray)
     sift = cv2.xfeatures2d.SIFT_create()
-    kp, des = sift.detectAndCompute(img_bgr8, None)
+    kp, des = sift.detectAndCompute(gray, None)
     upright = 0
     upleft = 0
     downright = 0
@@ -72,6 +73,14 @@ def countourpnts_up(img_bgr8):
         img_bgr8 = pca.rotate_90(img_bgr8)
         img_bgr8 = pca.rotate_90(img_bgr8)
     return img_bgr8
+
+
+def draw_sift(img):
+    sift = cv2.xfeatures2d.SIFT_create()
+    kp = sift.detect(img, None)
+    img_cp = img.copy()
+    cv2.drawKeypoints(img, kp, img_cp)
+    return img_cp
 #
 #     print ('\n')
 #     # print (len(kp))
