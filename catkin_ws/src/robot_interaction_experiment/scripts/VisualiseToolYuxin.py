@@ -57,12 +57,6 @@ if __name__ == '__main__':
     except IOError:
         print ("Could not open file " + str(sys.argv[0] + "!"))
         exit(1)
-    preprocessfile(f)
-    try:
-        f = open('out.txt', 'r', 0)
-    except IOError:
-        print ("Could not open file " + str(sys.argv[0] + "!"))
-        exit(1)
     create_hist_matrix(f)
     global matrice_hist
     matrice_hist = np.array(matrice_hist)

@@ -7,7 +7,7 @@ def preprocessfile(file):
     lines = []
     get_next = 0
     lines_since_got = -100000
-    outfile = open('out.txt', 'w')
+    outfile = file
     for line_num, line in enumerate(file):
         if get_next == 1:
             last_dic = line
@@ -28,8 +28,10 @@ def preprocessfile(file):
         if '#Object' in line:
             lines_since_got = 0
         lines.append(line)
+    outfile.seek(0)
     for line in lines:
         outfile.write(line)
+
 
 
 if __name__ == '__main__':

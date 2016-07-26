@@ -25,6 +25,7 @@ import copy
 import math
 import threading
 from orientation import pca, machinelearning, min_area_triang, features_based
+from skimage.feature import hog
 
 
 ####################
@@ -46,6 +47,7 @@ N_COLORS = 80  # number of colors to consider when creating the image descriptor
 # Global variables #
 ####################
 using_VGA = 0
+got_speech = 0
 depth_img_avg = np.zeros((100, 100))
 img_bgr8_clean = np.zeros((100, 100))
 show_color = False
@@ -192,6 +194,8 @@ def begin_treatment():
         treatment_lock.release()
         return
     clr, dpht = cut_working_area(img_bgr8_clean.copy(), depth_img_avg.copy())
+    cv2.imshow('Working Area', clr)
+    cv2.waitKey(1)
     useful_cnts = find_cnts_in_depth(dpht)
     if useful_cnts is None:
         treatment_lock.release()
@@ -222,8 +226,20 @@ def only_get_one_img(imgs_n_centers):
         img_bgr8_copy = img_bgr8.copy()
         return img_bgr8_copy
 
+
+def get_img_hog(img):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = cv2.resize(img, (80, 80), interpolation=cv2.INTER_AREA)
+    n_bin = 9
+    b_size = 8
+    c_size = 8
+    fd, hog_img = hog(img, orientations=n_bin, pixels_per_cell=(c_size, c_size),
+                        cells_per_block=(int(b_size / c_size), int(b_size / c_size)), visualise=True)
+    return fd, hog_img
+
+
 def orientate_imgs(imgs_n_centers):
-    pass
+    global got_speech
     # Does not really work, just to visualize 'why' is does not work and maybe expand it
     # min_area_triang.objects_detector(imgs_n_centers)
 
@@ -237,33 +253,35 @@ def orientate_imgs(imgs_n_centers):
     # or resolve it using the number of contour points in its up or down side.
     # img_90 = features_based.countourpnts_up(img_180)
 
-
-    # final_imgs = machinelearning.objects_detector(imgs_n_centers)
-    # if final_imgs is None or len(final_imgs) == 0:
-    #     return
-    # for index, img in enumerate(final_imgs):
-    #     cv2.imshow('Img ' + str(index), img)
-    #     if loaded_clf:
-    #         rows, cols, d = final.shape
-    #         detected_object = Detected_Object()
-    #         detected_object.id = 1
-    #         detected_object.image = CvBridge().cv2_to_imgmsg(final, encoding="passthrough")
-    #         detected_object.center_x = rows / 2
-    #         detected_object.center_y = cols / 2
-    #         detected_object.features.hog_histogram = get_img_hog(final)[0]
-    #         colors_histo, object_shape = getpixelfeatures(final)
-    #         detected_object.features.colors_histogram = colors_histo.tolist()
-    #         detected_object.features.shape_histogram = object_shape.tolist()
-    #         detected_objects_list.append(detected_object)
+    final_imgs = machinelearning.objects_detector(imgs_n_centers)
+    if final_imgs is None or len(final_imgs) == 0:
+        return
+    detected_objects_list = list()
+    for index, img in enumerate(final_imgs):
+        cv2.imshow('Img ' + str(index), img)
+        rows, cols, d = img.shape
+        detected_object = Detected_Object()
+        detected_object.id = index
+        detected_object.image = CvBridge().cv2_to_imgmsg(img, encoding="passthrough")
+        detected_object.center_x = rows / 2
+        detected_object.center_y = cols / 2
+        hog, image_hog = get_img_hog(img)
+        detected_object.features.hog_histogram = hog
+        detected_object.hog_image = CvBridge().cv2_to_imgmsg(image_hog, encoding="passthrough")
+        colors_histo, object_shape = getpixelfeatures(img)
+        detected_object.features.colors_histogram = colors_histo.tolist()
+        detected_object.features.shape_histogram = object_shape.tolist()
+        detected_objects_list.append(detected_object)
     #         if recording == 1:
     #             cv2.imshow('Just Sent' + str(index), final)
     #
     # # if got_speech == 0:
     # #     return
     # if loaded_clf:
-    #     detected_objects_list_msg = Detected_Objects_List()
-    #     detected_objects_list_msg.detected_objects_list = detected_objects_list
-    #     detected_objects_list_publisher.publish(detected_objects_list_msg)
+    if got_speech == 0:
+        return
+    detected_objects_list_publisher.publish(detected_objects_list)
+    got_speech = 0
 
 '''
 Callback from the audio related topic. Receives the current dictionary, words histogram and last spoken words (speech).
@@ -365,7 +383,7 @@ def find_cnts_in_depth(depth):
     # resize the depth image so it matches the color one
     depth_copy = copy.copy(depth)
     closest_pnt = np.amin(depth)
-    old = False
+    old = True
     if old:
         img_detection = np.where(depth_copy < closest_pnt + val_depth_capture, depth_copy, 0)
         # put all the pixels greater than 0 to 255

@@ -289,7 +289,7 @@ def begin_treatment():
         # print ('Got PCA')
         img_bgr8_clean_copy = cv2.cvtColor(img_bgr8_clean_copy, cv2.COLOR_GRAY2BGR)
         # print ('Drawing line')
-        pca_comp = pca.components_*100
+        pca_comp = pca.components_*10
         print (np.shape(pca_comp))
         cv2.line(img_bgr8_clean_copy, (int(pca_comp[0][0]), int(pca_comp[0][1])), (int(pca_comp[1][0]), int(pca_comp[1][1])), (255, 0, 0), 5)
         cv2.imshow('RGB_img', img_bgr8_clean_copy)

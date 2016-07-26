@@ -5,6 +5,9 @@ from robot_interaction_experiment.msg import Audition_Features
 import cv2
 import rospy
 from robot_interaction_experiment.msg import Detected_Objects_List
+import preprocessRecordings
+import numpy as np
+import sys
 
 ''' This script is used to record the data generated during the experiments so it can later be used for training.
 The recorded data is:
@@ -18,7 +21,7 @@ got_speech = 0
 words_histogram = []
 speech = []
 speech_counter = 0
-f = open('RecordedData/ExperimentDataLog', 'w', 0)
+f = open('RecordedData/ExperimentDataLog', 'w+', 0)
 
 '''
 Callback from the vision related topic. Waits until there is a speech to associate it to the detected object and
@@ -28,6 +31,7 @@ record.
 
 def callback_rgb(data):
     global lock
+    global f
     lock.acquire()  # Prevent data races
     try:
         global got_speech
@@ -56,9 +60,20 @@ def callback_rgb(data):
             except CvBridgeError, e:
                 print e
                 return
+            try:
+                hog_img = CvBridge().imgmsg_to_cv2(det_object.hog_image)
+            except CvBridgeError, e:
+                print e
+                return
             cv2.imwrite('RecordedData/Exp_' + str(speech_counter) + '_objs_' + str(det_object.id) + '.png', object_image)
+            print (np.(hog_img))
+            hog_img = np.uint8(hog_img)*(sys.maxint/np.amax(hog_img))
+            cv2.imwrite('RecordedData/Exp_' + str(speech_counter) + '_objs_' + str(det_object.id) + '_hog.png', hog_img)
         speech_counter += 1
         got_speech = 0
+        f.seek(0)
+        preprocessRecordings.preprocessfile(f)
+        f.seek(0, 2)
     finally:
         lock.release()
 
@@ -75,9 +90,13 @@ def callback_audio_recognition(words):
     if not words.complete_words:
         return
     speech = words.complete_words
+    print (words.complete_words)
     got_speech = 1
     dictionary = words.words_dictionary
+    print (words.words_dictionary)
+
     words_histogram = words.words_histogram
+    print (words.words_histogram)
 
 
 if __name__ == '__main__':
