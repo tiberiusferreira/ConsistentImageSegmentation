@@ -24,7 +24,7 @@ import tsne
 import copy
 import math
 import threading
-from orientation import pca, machinelearning, min_area_triang
+from orientation import pca, machinelearning, min_area_triang, features_based
 
 
 ####################
@@ -214,13 +214,29 @@ def begin_treatment():
     orientate_imgs(imgs_n_centers)
     treatment_lock.release()
 
+def only_get_one_img(imgs_n_centers):
+    if imgs_n_centers is None:
+        return
+    for index, curr_tuple in enumerate(imgs_n_centers):
+        img_bgr8, center = curr_tuple
+        img_bgr8_copy = img_bgr8.copy()
+        return img_bgr8_copy
 
 def orientate_imgs(imgs_n_centers):
+    pass
     # Does not really work, just to visualize 'why' is does not work and maybe expand it
     # min_area_triang.objects_detector(imgs_n_centers)
 
     # Here is the PCA approach
-    pca.apply_pca_rotation(imgs_n_centers)
+    # Apply only the PCA rotation (narrows the image to 2 possible position, may be upside down)
+
+    # Only send one image to it since it is not supposed to be used in a real scenario in its current state
+    # img_180 = pca.apply_pca_rotation(only_get_one_img(imgs_n_centers))
+    # resolve the "maybe it's upside" ambiguity using the location of sift features on the image
+    # img_90 = features_based.sifts_up(img_180)
+    # or resolve it using the number of contour points in its up or down side.
+    # img_90 = features_based.countourpnts_up(img_180)
+
 
     # final_imgs = machinelearning.objects_detector(imgs_n_centers)
     # if final_imgs is None or len(final_imgs) == 0:
