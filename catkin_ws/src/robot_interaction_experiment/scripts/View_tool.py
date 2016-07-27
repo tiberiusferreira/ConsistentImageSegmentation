@@ -11,7 +11,7 @@ import scipy
 from scipy import io
 from scipy.sparse import issparse
 
-img_shape_size = 30
+img_shape_size = 80
 max_histogram_size = 50
 n_colors = 80 #40
 font_size = 20
@@ -33,15 +33,18 @@ def NMF_dictionary_viewer(words_dictionary, NMF_dictionary):
 
 
     for Ki, NMF_histogram in enumerate(NMF_dictionary):
-        shape_histogram, colors_histogram, words_histogram = NMF_histogram
-        
-        shape_data = np.array(shape_histogram)
-        shape_data = shape_data * 255 / np.max(shape_data)
-        shape_data = shape_data.astype(np.uint8)
-        shape_data = cv2.cvtColor(shape_data, cv2.COLOR_GRAY2RGB)
+        hog, colors_histogram, words_histogram = NMF_histogram
+        hog = cv2.resize(hog, (img_shape_size, img_shape_size))
+        print 'Shape:'
+        print (np.shape(hog))
+        img[10:10 + img_shape_size, 10 + Ki * (dist + 10):10 + Ki * (dist + 10) + img_shape_size] = np.reshape(hog, (img_shape_size, img_shape_size, 3))
+        # shape_data = np.array(shape_histogram)
+        # shape_data = shape_data * 255 / np.max(shape_data)
+        # shape_data = shape_data.astype(np.uint8)
+        # shape_data = cv2.cvtColor(shape_data, cv2.COLOR_GRAY2RGB)
 #         print len(shape_data), img_shape_size
-        img[10:10+img_shape_size, 10+Ki*(dist+10):10+Ki*(dist+10)+img_shape_size] \
-                        = np.reshape(shape_data, (img_shape_size, img_shape_size, 3))
+#         img[10:10+img_shape_size, 10+Ki*(dist+10):10+Ki*(dist+10)+img_shape_size] \
+#                         = np.reshape(shape_data, (img_shape_size, img_shape_size, 3))
         
         for i_color in range(n_colors):
             color = float(i_color) / n_colors
@@ -65,7 +68,7 @@ def NMF_dictionary_viewer(words_dictionary, NMF_dictionary):
             # 10+150*(i/half_n_words)
         
         
-        cv2.putText(img, str(Ki), (10+60+Ki*(dist+10), 10+font_size), \
+        cv2.putText(img, str(Ki), (10+img_shape_size+Ki*(dist+10), 10+font_size), \
                     cv2.FONT_HERSHEY_PLAIN, font_size/20.0, (255, 255, 255))
     
     return img

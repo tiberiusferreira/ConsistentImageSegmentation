@@ -69,7 +69,9 @@ if __name__ == '__main__':
     words_dictionary_visual = dict
     Xres = matrice_hist
     # print matrice_hist
-    NMF_dictionary_visual = np.array([np.array([Xres[0, 0:n_shape], Xres[0, n_shape:n_color + n_shape],
+    hog = cv2.imread('NoLightCut.png')
+
+    NMF_dictionary_visual = np.array([np.array([hog, Xres[0, n_shape:n_color + n_shape],
                                                 Xres[0, n_color + n_shape:]])])
     for i in range(1, len(Xres)):
         values = np.array([np.array([Xres[i, 0:n_shape], Xres[i, n_shape:n_color + n_shape],
@@ -77,5 +79,6 @@ if __name__ == '__main__':
         NMF_dictionary_visual = np.vstack([NMF_dictionary_visual, values])
 
     img_iteration = NMF_dictionary_viewer(words_dictionary_visual, NMF_dictionary_visual)
-    cv2.imshow('Image.png', img_iteration)
+    l, w, d = np.shape(img_iteration)
+    cv2.imshow('Image.png', cv2.resize(img_iteration, (w*2, l*2)))
     cv2.waitKey(0)

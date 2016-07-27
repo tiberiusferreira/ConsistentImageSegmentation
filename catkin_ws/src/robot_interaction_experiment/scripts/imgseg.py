@@ -26,6 +26,7 @@ import math
 import threading
 from orientation import pca, machinelearning, min_area_triang, features_based
 from skimage.feature import hog
+from skimage import exposure
 
 
 ####################
@@ -235,6 +236,9 @@ def get_img_hog(img):
     c_size = 8
     fd, hog_img = hog(img, orientations=n_bin, pixels_per_cell=(c_size, c_size),
                         cells_per_block=(int(b_size / c_size), int(b_size / c_size)), visualise=True)
+    hog_img = exposure.rescale_intensity(hog_img, in_range=(0, 8))
+    cv2.imshow('hog', hog_img)
+    cv2.waitKey(100)
     return fd, hog_img
 
 

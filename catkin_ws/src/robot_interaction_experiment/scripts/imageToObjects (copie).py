@@ -515,7 +515,7 @@ def objects_detector(img_bgr8, i):
 
     cv2.imshow('CropGray', resized_cnt)
     fd, hog_image = hog(cropped_gray, orientations=n_bin, pixels_per_cell=(c_size, c_size),
-                        cells_per_block=(b_size / c_size, b_size / c_size), visualise=True)
+                        cells_per_block=(b_size / c_size, b_size / c_size), visualise=True, normalise=True)
     hog_image = exposure.rescale_intensity(hog_image, in_range=(0, 4))
     # cv2.imshow('HOGG', hog_image)
     features_hog = fd
