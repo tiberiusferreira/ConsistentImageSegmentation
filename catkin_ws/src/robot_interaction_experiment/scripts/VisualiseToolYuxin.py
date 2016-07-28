@@ -82,5 +82,5 @@ if __name__ == '__main__':
     img_iteration = NMF_dictionary_viewer(words_dictionary_visual, hog_n_color, NMF_dictionary_visual)
     cv2.imshow('Img', img_iteration)
     cv2.waitKey(0)
-    cv2.imwrite('Exp_data_visualization.png', img_iteration)
+    cv2.imwrite(sys.argv[1] + 'Exp_data_visualization.png', img_iteration)
 

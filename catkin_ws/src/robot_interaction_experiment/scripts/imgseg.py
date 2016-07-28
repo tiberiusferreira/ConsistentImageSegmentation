@@ -444,11 +444,29 @@ def find_cnts_in_depth(depth):
 
 
 def getpixelfeatures(object_img_bgr8):
-    object_img_bgr8 = cv2.resize(object_img_bgr8, (30, 30))
+
+    ########
     object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
+    print (np.where(object_img_hsv[:, :, 0] == 0))
+    hh = 255
+    hl = 0
+    sh = 255
+    sl = 40  # filter the white color background
+    vh = 255
+    vl = 0
+    lowerbound = np.array([hl, sl, vl], np.uint8)
+    upperbound = np.array([hh, sh, vh], np.uint8)
+    # 2-filter the image to generate the mask
+    filtered_hsv = cv2.inRange(object_img_hsv, lowerbound, upperbound)
+    filtered_hsv = cv2.bitwise_and(object_img_hsv, object_img_hsv, mask=filtered_hsv)
+    object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_HSV2BGR)
+
+    cv2.imshow('hsv', object_img_hsv)
+    cv2.waitKey(100)
     # gets the color histogram divided in N_COLORS "categories" with range 0-179
-    colors_histo, histo_bins = np.histogram(object_img_hsv[:, :, 0], bins=N_COLORS, range=(0, 179))
-    colors_histo[0] -= len(np.where(object_img_hsv[:, :, 1] == 0)[0])
+    colors_histo, histo_bins = np.histogram(filtered_hsv[:, :, 0], bins=N_COLORS, range=(0, 179))
+    # print np.shape(colors_histo)
+    colors_histo[0] -= len(np.where(object_img_hsv[:, :, 1] <= 20)[0])
     half_segment = int(N_COLORS / 4)
     middle = colors_histo * np.array([0.0] * half_segment + [1.0] * 2 * half_segment + [0.0] * half_segment)
     sigma = 2.0
@@ -464,8 +482,48 @@ def getpixelfeatures(object_img_bgr8):
     if sum != 0:
         object_shape = object_shape / float(np.sum(object_shape))
     features = Vision_Features()
-    # features.colors_histogram = colors_histo
-    # features.shape_histogram = object_shape
+    features.colors_histogram = colors_histo
+    features.shape_histogram = object_shape
+
+    ########
+
+    # object_img_bgr8 = cv2.resize(object_img_bgr8, (30, 30))
+    # object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
+    # print (object_img_hsv[-1,-1,:])
+    # # gets the color histogram divided in N_COLORS "categories" with range 0-179
+    # # Remove regions where saturation == 0 -> remove black, grey and white parts
+    # # hh = 255
+    # # hl = 0
+    # # sh = 255
+    # # sl = 40  # filter the white color background
+    # # vh = 255
+    # # vl = 0
+    # # lowerbound = np.array([hl, sl, vl], np.uint8)
+    # # upperbound = np.array([hh, sh, vh], np.uint8)
+    # # # 2-filter the image to generate the mask
+    # # filtered_hsv = cv2.inRange(object_img_hsv, lowerbound, upperbound)
+    # # filtered_hsv = cv2.bitwise_and(object_img_hsv, object_img_hsv, mask=filtered_hsv)
+    # #
+    # # cv2.imshow('hsv', filtered_hsv)
+    # colors_histo, histo_bins = np.histogram(object_img_bgr8[:, :, 0], bins=N_COLORS, range=(0, 179))
+    # colors_histo[0] -= len(np.where(object_img_hsv[:, :, 1] < 20)[0])
+    # half_segment = int(N_COLORS / 4)
+    # middle = colors_histo * np.array([0.0] * half_segment + [1.0] * 2 * half_segment + [0.0] * half_segment)
+    # sigma = 2.0
+    # middle = ndimage.filters.gaussian_filter1d(middle, sigma)
+    # exterior = colors_histo * np.array([1.0] * half_segment + [0.0] * 2 * half_segment + [1.0] * half_segment)
+    # exterior = np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
+    # exterior = ndimage.filters.gaussian_filter1d(exterior, sigma)
+    # colors_histo = middle + np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
+    # colors_histo /= float(np.sum(colors_histo))
+    # object_shape = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2GRAY)
+    # object_shape = np.ndarray.flatten(object_shape)
+    # sum = float(np.sum(object_shape))
+    # if sum != 0:
+    #     object_shape = object_shape / float(np.sum(object_shape))
+    # features = Vision_Features()
+    # # features.colors_histogram = colors_histo
+    # # features.shape_histogram = object_shape
     return colors_histo, object_shape
 
 if __name__ == '__main__':
