@@ -237,8 +237,6 @@ def get_img_hog(img):
     fd, hog_img = hog(img, orientations=n_bin, pixels_per_cell=(c_size, c_size),
                         cells_per_block=(int(b_size / c_size), int(b_size / c_size)), visualise=True)
     hog_img = exposure.rescale_intensity(hog_img, in_range=(0, 8))
-    cv2.imshow('hog', hog_img)
-    cv2.waitKey(100)
     return fd, hog_img
 
 
@@ -274,7 +272,7 @@ def orientate_imgs(imgs_n_centers):
         detected_object.hog_image = CvBridge().cv2_to_imgmsg(image_hog, encoding="passthrough")
         colors_histo, object_shape = getpixelfeatures(img)
         detected_object.features.colors_histogram = colors_histo.tolist()
-        detected_object.features.shape_histogram = object_shape.tolist()
+        # detected_object.features.shape_histogram = object_shape.tolist()
         detected_objects_list.append(detected_object)
     #         if recording == 1:
     #             cv2.imshow('Just Sent' + str(index), final)

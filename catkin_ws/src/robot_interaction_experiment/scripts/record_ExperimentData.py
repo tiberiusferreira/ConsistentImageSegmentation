@@ -8,7 +8,9 @@ from robot_interaction_experiment.msg import Detected_Objects_List
 import preprocessRecordings
 import numpy as np
 import sys
-
+import joblib
+import os
+import time
 ''' This script is used to record the data generated during the experiments so it can later be used for training.
 The recorded data is:
     The detected objects as published by the detected_objects_list topic
@@ -21,8 +23,7 @@ got_speech = 0
 words_histogram = []
 speech = []
 speech_counter = 0
-f = open('RecordedData/ExperimentDataLog', 'w+', 0)
-
+hog_n_color = list()
 '''
 Callback from the vision related topic. Waits until there is a speech to associate it to the detected object and
 record.
@@ -32,13 +33,13 @@ record.
 def callback_rgb(data):
     global lock
     global f
+    global hog_n_color
     lock.acquire()  # Prevent data races
     try:
         global got_speech
         global speech_counter
         if got_speech == 0:
             return
-        counter = 0
         print 'Recording experiment ' + str(speech_counter) + '\n'
         f.write('#Informations about sample, No. ' + str(speech_counter) + '\n')
         f.write('#Format = Dictionary / Detected Words / Shape / HoG / Color / Words Histogram\n')
@@ -65,10 +66,18 @@ def callback_rgb(data):
             except CvBridgeError, e:
                 print e
                 return
-            cv2.imwrite('RecordedData/Exp_' + str(speech_counter) + '_objs_' + str(det_object.id) + '.png', object_image)
-            print (np.(hog_img))
-            hog_img = np.uint8(hog_img)*(sys.maxint/np.amax(hog_img))
-            cv2.imwrite('RecordedData/Exp_' + str(speech_counter) + '_objs_' + str(det_object.id) + '_hog.png', hog_img)
+            cv2.imwrite(directory + '/Exp_' + str(speech_counter) + '_objs_' + str(det_object.id) + '.png', object_image)
+            hog_img = np.uint8(hog_img*255/np.amax(hog_img))
+            cv2.imwrite(directory + '/Exp_' + str(speech_counter) + '_objs_' + str(det_object.id) + '_hog.jpg', hog_img)
+            hog_n_color.append((hog_img, object_image))
+            if os.path.exists(directory + '/hog_n_color.pickle'):
+                try:
+                    os.remove(directory + '/hog_n_color.pickle')
+                    print ('Removed existing hog_n_color.pickle')
+                except Exception, e:
+                    print("Got an error while traing to remove " + directory + '/hog_n_color.pickle' + ":" + str(e))
+                    exit(1)
+            joblib.dump(hog_n_color, directory + '/hog_n_color.pickle')
         speech_counter += 1
         got_speech = 0
         f.seek(0)
@@ -101,6 +110,16 @@ def callback_audio_recognition(words):
 
 if __name__ == '__main__':
     rospy.init_node('recordExperimentData', anonymous=True)
+    dire = str(raw_input('Where to save? Ex: cow => RecordedData/cow. -1 = use date: '))
+    if dire == str(-1):
+        directory = 'RecordedData/' + time.strftime("%Y_%m_%d-%H_%M_%S")
+    else:
+        directory = 'RecordedData/' + dire
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    f = open(directory + '/ExperimentDataLog.txt', 'w+', 0)
+    print ('Ok recording on ' + str(f))
+
     object_sub = rospy.Subscriber("audition_features", Audition_Features, callback_audio_recognition)
     object_sub = rospy.Subscriber("detected_objects_list", Detected_Objects_List, callback_rgb)
     try:
