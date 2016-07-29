@@ -100,6 +100,16 @@ def hog_pred(value):
     global clf
     print(clf.predict(fd))
     print(clf.predict_proba(fd)[0])
+    return clf.predict(fd)
+
+
+# Returns the predicted label of the image
+def label_pred(img):
+    well_oriented_img, confiance = rotate_n_resize(img)
+    fd = get_img_hog(well_oriented_img)
+    global clf
+    return clf.predict(fd)[0]
+
 
 # attempts to load the HoG (and labels) from disk in the directory HoG_PATH.
 # The hog is then stored in the global variable hog_list

@@ -75,7 +75,7 @@ def callback_rgb(data):
                     os.remove(directory + '/hog_n_color.pickle')
                     print ('Removed existing hog_n_color.pickle')
                 except Exception, e:
-                    print("Got an error while traing to remove " + directory + '/hog_n_color.pickle' + ":" + str(e))
+                    print("Got an error while trying to remove " + directory + '/hog_n_color.pickle' + ":" + str(e))
                     exit(1)
             joblib.dump(hog_n_color, directory + '/hog_n_color.pickle')
         speech_counter += 1
