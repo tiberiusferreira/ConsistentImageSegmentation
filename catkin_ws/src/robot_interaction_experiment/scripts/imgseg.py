@@ -27,7 +27,8 @@ import threading
 from orientation import pca, machinelearning, min_area_triang, features_based
 from skimage.feature import hog
 from skimage import exposure
-
+import colorsys
+import matplotlib.pyplot as plt
 
 ####################
 # Constants max HoG size = 900  #
@@ -444,38 +445,74 @@ def find_cnts_in_depth(depth):
 
 
 def getpixelfeatures(object_img_bgr8):
-
     ########
-    object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
-    print (np.where(object_img_hsv[:, :, 0] == 0))
-    hh = 255
-    hl = 0
-    sh = 255
-    sl = 40  # filter the white color background
-    vh = 255
-    vl = 0
-    lowerbound = np.array([hl, sl, vl], np.uint8)
-    upperbound = np.array([hh, sh, vh], np.uint8)
-    # 2-filter the image to generate the mask
-    filtered_hsv = cv2.inRange(object_img_hsv, lowerbound, upperbound)
-    filtered_hsv = cv2.bitwise_and(object_img_hsv, object_img_hsv, mask=filtered_hsv)
-    object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_HSV2BGR)
+    object_img_bgr8 = cv2.resize(object_img_bgr8, (40, 40))
 
-    cv2.imshow('hsv', object_img_hsv)
-    cv2.waitKey(100)
+    object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
+    # print (np.where(object_img_hsv[:, :, 0] == 0))
+    # hh = 255
+    # hl = 0
+    # sh = 255
+    # sl = 40  # filter the white color background
+    # vh = 255
+    # vl = 0
+    # lowerbound = np.array([hl, sl, vl], np.uint8)
+    # upperbound = np.array([hh, sh, vh], np.uint8)
+    # # 2-filter the image to generate the mask
+    # filtered_hsv = cv2.inRange(object_img_hsv, lowerbound, upperbound)
+    # filtered_hsv = cv2.bitwise_and(object_img_hsv, object_img_hsv, mask=filtered_hsv)
+    # object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_HSV2BGR)
+    #
+    # cv2.imshow('hsv', object_img_hsv)
+    # cv2.waitKey(100)
     # gets the color histogram divided in N_COLORS "categories" with range 0-179
-    colors_histo, histo_bins = np.histogram(filtered_hsv[:, :, 0], bins=N_COLORS, range=(0, 179))
+    new_hue = list()
+    x, y, d = np.shape(object_img_hsv)
+    n_colors = 200
+    # for i in range(x):
+    #     for i2 in range(y):
+    #         if object_img_hsv[i, i2, 1] > 100 and object_img_hsv[i, i2, 2] > 100:
+    #             new_hue.append(object_img_hsv[i, i2, 0])
+    # colors_histo, histo_bins = np.histogram(new_hue, bins=n_colors, range=(0, 179), density=True)
+
+    # colors_histo, histo_bins = np.histogram(object_img_hsv[:, :, 1], bins=n_colors, density=True)
+    # print (len(colors_histo))
+
+    for i in range(x):
+        for i2 in range(y):
+            if object_img_hsv[i, i2, 1] > 100:
+                new_hue.append(object_img_hsv[i, i2, 0])
+    colors_histo, histo_bins = np.histogram(new_hue, bins=n_colors, range=(0, 179), density=True)
+    # plt.bar(range(0, 80), colors_histo)
+    # plt.show(False)
+
+
+    # colors_histo = colors_histo / float(np.sum(colors_histo))
+    max_histogram_size = 100
+    img = np.zeros((400, 400, 3), dtype=np.uint8)
+    for i_color in range(n_colors):  # n_colors = 80
+        color = float(i_color) / n_colors
+        r, g, b = colorsys.hsv_to_rgb(color, 1.0, 1.0)
+        r = int(r * 255)
+        g = int(g * 255)
+        b = int(b * 255)
+        # print (r)
+        # print (b)
+        cv2.line(img, (20 + i_color, 265 + max_histogram_size), (20 + i_color, 265 + max_histogram_size - int(colors_histo[i_color] * max_histogram_size)),
+                 (b, g, r), 1)
+        # print ("B = " + str(b) + ' G = ' + str(g) + ' R = ' + str(r))
+    cv2.imshow('aa', img)
+
     # print np.shape(colors_histo)
-    colors_histo[0] -= len(np.where(object_img_hsv[:, :, 1] <= 20)[0])
-    half_segment = int(N_COLORS / 4)
-    middle = colors_histo * np.array([0.0] * half_segment + [1.0] * 2 * half_segment + [0.0] * half_segment)
-    sigma = 2.0
-    middle = ndimage.filters.gaussian_filter1d(middle, sigma)
-    exterior = colors_histo * np.array([1.0] * half_segment + [0.0] * 2 * half_segment + [1.0] * half_segment)
-    exterior = np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
-    exterior = ndimage.filters.gaussian_filter1d(exterior, sigma)
-    colors_histo = middle + np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
-    colors_histo = colors_histo / float(np.sum(colors_histo))
+    # colors_histo[0] -= len(np.where(object_img_hsv[:, :, 1] <= 20)[0])
+    # half_segment = int(N_COLORS / 4)
+    # middle = colors_histo * np.array([0.0] * half_segment + [1.0] * 2 * half_segment + [0.0] * half_segment)
+    # sigma = 2.0
+    # middle = ndimage.filters.gaussian_filter1d(middle, sigma)
+    # exterior = colors_histo * np.array([1.0] * half_segment + [0.0] * 2 * half_segment + [1.0] * half_segment)
+    # exterior = np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
+    # exterior = ndimage.filters.gaussian_filter1d(exterior, sigma)
+    # colors_histo = middle + np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
     object_shape = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2GRAY)
     object_shape = np.ndarray.flatten(object_shape)
     sum = float(np.sum(object_shape))

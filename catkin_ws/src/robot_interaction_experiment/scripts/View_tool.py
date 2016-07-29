@@ -38,7 +38,7 @@ def NMF_dictionary_viewer(words_dictionary, hog_n_color, NMF_dictionary):
         img[20 + img_size:20 + 2 * img_size, 10 + Ki * (horz_dist + 10):10 + Ki * (horz_dist + 10) + img_size] = np.reshape(color_img, (img_size, img_size, 3))
 
         
-        for i_color in range(n_colors):
+        for i_color in range(n_colors): # n_colors = 80
             color = float(i_color) / n_colors
             r, g, b = colorsys.hsv_to_rgb(color, 1.0, 1.0)
             r = int(r * 255)
