@@ -53,10 +53,10 @@ def create_hist_matrix(file):
 
 if __name__ == '__main__':
     if len(sys.argv) > 2:
-        print 'Pass only the (path) to the recordings file.\n'
+        print ('Pass only the (path) to the recordings file.\n')
         exit(1)
     if len(sys.argv) < 2:
-        print 'I need the path where ExperimentDataLog.txt and HoG_imgs.pickle are.'
+        print ('I need the path where ExperimentDataLog.txt and HoG_imgs.pickle are.')
         exit(1)
     print (sys.argv[1])
     try:

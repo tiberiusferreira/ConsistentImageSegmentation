@@ -265,22 +265,27 @@ def get_img_hog(img):
 
 
 def orientate_imgs(imgs_n_centers):
-    # Does not really work, just to visualize 'why' is does not work and maybe expand it
-    # min_area_triang.objects_detector(only_get_one_img(imgs_n_centers))
+    orientation_method = 2  # 0 = HSV + contours, 1 = PCA, 2 = machine learning
+    if orientation_method == 0:
+        # Using HSV filtering #
+        # Does not really work, just to visualize 'why' is does not work and maybe expand it
+        min_area_triang.objects_detector(only_get_one_img(imgs_n_centers))
+    elif orientation_method == 1:
+        # Here is the PCA approach
+        # Apply only the PCA rotation (narrows the image to 2 possible position, may be upside down)
 
-    # Here is the PCA approach
-    # Apply only the PCA rotation (narrows the image to 2 possible position, may be upside down)
-
-    # Only send one image to it since it is not supposed to be used in a real scenario in its current state
-    # img_180 = pca.apply_pca_rotation(only_get_one_img(imgs_n_centers))
-    # resolve the "maybe it's upside" ambiguity using the location of sift features on the image
-    # img_90 = features_based.sifts_up(img_180)
-    # or resolve it using the number of contour points in its up or down side.
-    # img_90 = features_based.countourpnts_up(img_180)
-
-    # using machine learning, this is the method that actually works
-    final_imgs = machinelearning.objects_detector(imgs_n_centers)
-    send_imgs(final_imgs)
+        # Only send one image to it since it is not supposed to be used in a real scenario in its current state
+        img_180 = pca.apply_pca_rotation(only_get_one_img(imgs_n_centers))
+        # resolve the "maybe it's upside" ambiguity using the location of sift features on the image
+        img_90 = features_based.sifts_up(img_180, 0)
+        # or resolve it using the number of contour points in its up or down side.
+        # img_90 = features_based.countourpnts_up(img_180)
+        cv2.imshow('RotatedImg', img_90)
+        cv2.waitKey(1)
+    elif orientation_method == 2:
+        # Using machine learning, this is the method that actually works
+        final_imgs = machinelearning.objects_detector(imgs_n_centers)
+        send_imgs(final_imgs)
 
 
 # actually sends the images to ROS using the detected objects message, only sends if a speech is detected
@@ -292,6 +297,7 @@ def send_imgs(img_list):
     detected_objects_list = list()
     for index, img in enumerate(img_list):
         cv2.imshow('Img ' + str(index), img)
+        cv2.waitKey(1)
         rows, cols, d = img.shape
         detected_object = Detected_Object()
         detected_object.id = index

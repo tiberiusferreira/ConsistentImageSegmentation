@@ -99,8 +99,8 @@ def objects_detector(img):
     # 6-taking the convex hull enclosing the contour in order to further reduce noise propagation from small changes in
     # the image from one frame to the other
     hull = cv2.convexHull(cnt)
-    contour_img = img_bgr8_copy.copy()
-    contour_img_clean = img_bgr8_copy.copy()
+    contour_img = img_cp.copy()
+    contour_img_clean = img_cp.copy()
     cv2.drawContours(contour_img, cnt, -1, (0, 255, 0), 3)
     cv2.drawContours(contour_img_clean, cnt, -1, (0, 255, 0), 3)
 
