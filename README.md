@@ -1,6 +1,6 @@
-# ConsistentImageSegmentation
+# Consistent Image Segmentation
 
-Several scripts which take an RGB-D camera feed and microphone sound. 
+Several scripts which take an RGB-D (color and depth data) camera feed and microphone sound. 
 
 The goal is to segment the shown cubes and always show the image on the cubes face in the same orientation.
 
@@ -8,9 +8,9 @@ The cubes have different images, but all the faces of one given cube have the sa
 
 ![alt tag](https://github.com/tiberiusferreira/ConsistentImageSegmentation/blob/master/catkin_ws/src/robot_interaction_experiment/scripts/rapport/cubes_photo.jpeg?raw=true)
 
-The segmentation is simple just by taking the depth image, resizing/cropping it so it has the same aspect ratio of the RGB one, finding shapes which resemble a cube and mapping it to the RGB one. 
+Fot the segmentation the depth image is resized and cropped in order to have the same aspect ratio of the RGB one. After that shapes which resemble a cube are found using OpenCV's findContours function. After that the corresponding regions are taking from the RGB image. 
 
-The hard part is finding the correct orientation of the image (by correct I mean always showing the same image shape in the same orientation even when it changes colors or its image is a bit deformed due to camera position. 
+The hard part is finding the correct orientation of the image (correct meaning always showing the same image shape in the same orientation even when it changes colors or its image is a bit deformed due to camera position). 
 
 Three methods were implemented:
 
