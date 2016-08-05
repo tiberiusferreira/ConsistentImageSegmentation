@@ -8,7 +8,7 @@ The cubes have different images, but all the faces of one given cube have the sa
 
 ![alt tag](https://github.com/tiberiusferreira/ConsistentImageSegmentation/blob/master/catkin_ws/src/robot_interaction_experiment/scripts/rapport/cubes_photo.jpeg?raw=true)
 
-Fot the segmentation the depth image is resized and cropped in order to have the same aspect ratio of the RGB one. After that shapes which resemble a cube are found using OpenCV's findContours function. After that the corresponding regions are taking from the RGB image. 
+For the segmentation the depth image is resized and cropped in order to have the same aspect ratio of the RGB one. After that shapes which resemble a cube are found using OpenCV's findContours function. Then the corresponding regions are taking from the RGB image. 
 
 The hard part is finding the correct orientation of the image (correct meaning always showing the same image shape in the same orientation even when it changes colors or its image is a bit deformed due to camera position). 
 
@@ -27,7 +27,11 @@ Using Machine Learning based on pre-recorded images of the cubes faces. The clas
 
 ![alt tag](https://github.com/tiberiusferreira/ConsistentImageSegmentation/blob/master/catkin_ws/src/robot_interaction_experiment/scripts/rapport/classes.png?raw=true)
 
-The other scripts accomplish small tasks aimed at helping a bigger project: Cross-situational noun and adjective learning in an interactive scenario, 2015 Joint IEEE International Conference on Development and Learning and Epigenetic Robotics (ICDL-EpiRob). One of those smaller tasks was to record an object database containing the objects HoG, Color Histogram, words describing, its color image and an image representing the HoG. A visualization tool was also created, a sample of its results is shown below. 
+The other scripts accomplish small tasks aimed at helping a bigger project: Cross-situational noun and adjective learning in an interactive scenario, 2015 Joint IEEE International Conference on Development and Learning and Epigenetic Robotics (ICDL-EpiRob). 
+
+One of those smaller tasks was to record an object database containing the objects HoG, Color Histogram, words describing, its color image and an image representing the HoG. 
+
+A visualization tool for the database was also created. A sample of its results is shown below. 
 
 ![alt tag](https://github.com/tiberiusferreira/ConsistentImageSegmentation/blob/master/catkin_ws/src/robot_interaction_experiment/scripts/Data_visualization_example.png?raw=true)
 
