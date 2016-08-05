@@ -27,7 +27,9 @@ Using Machine Learning based on pre-recorded images of the cubes faces. The clas
 
 ![alt tag](https://github.com/tiberiusferreira/ConsistentImageSegmentation/blob/master/catkin_ws/src/robot_interaction_experiment/scripts/rapport/classes.png?raw=true)
 
-The other scripts accomplish small tasks aimed at helping a bigger project: Cross-situational noun and adjective learning in an interactive scenario, 2015 Joint IEEE International Conference on Development and Learning and Epigenetic Robotics (ICDL-EpiRob)
+The other scripts accomplish small tasks aimed at helping a bigger project: Cross-situational noun and adjective learning in an interactive scenario, 2015 Joint IEEE International Conference on Development and Learning and Epigenetic Robotics (ICDL-EpiRob). One of those smaller tasks was to record an object database containing the objects HoG, Color Histogram, words describing, its color image and an image representing the HoG. A visualization tool was also created, a sample of its results is shown below. 
+
+![alt tag](https://github.com/tiberiusferreira/ConsistentImageSegmentation/blob/master/catkin_ws/src/robot_interaction_experiment/scripts/Data_visualization_example.png?raw=true)
 
 
 More information can be obtained reading the full report rapport-PRE-ReleaseCandidate2.pdf in the directory catkin_ws/src/robot_interaction_experiment/scripts/rapport
