@@ -10,7 +10,9 @@ import numpy as np
 from collections import Counter
 import time
 import os, pickle, copy
+''' This script helps automate the database recording by simulating speech.'''
 
+# publishes the given words describing the image
 def send_words(words):
     global repeated_dic
     audio.complete_words = words
@@ -43,6 +45,7 @@ if __name__ == '__main__':
     colors = ['yellow', 'red', 'purple', 'cyan', 'green', 'blue']
     filename = 'obj_description.pickle'
     os.remove(filename)
+    # gets the object description from obj_description.pickle and prompts the user to accept or reject the suggestion
     while 1:
         if typying:
             clr_n_label = (raw_input('Describe the scene (color + obj name): ')).split()
@@ -53,16 +56,17 @@ if __name__ == '__main__':
                 send_words(words)
                 print (words)
         else:
+            # keep checking until there is a new file with the description
             filename = 'obj_description.pickle'
             while not os.path.isfile('obj_description.pickle'):
                 time.sleep(0.4)
                 print ('No file =(')
             with open(filename, 'r') as f:
                 sentence_structs = pickle.load(f)
-            # for sentence in sentence_structs:
-            #     print sentence
+
             sentence_cp = copy.copy(sentence_structs)
             if (sentence_cp[0].split()[-2] in done) is True:
+                # checks if already recorded this color
                 print ('Already have this color: ' + str(sentence_cp[0].split()[-2]) + ', deleting file to get a new one.')
                 print ('Missing: ' + str([obj for obj in colors if obj not in done]))
                 not_recorded = [obj for obj in colors if obj not in done]

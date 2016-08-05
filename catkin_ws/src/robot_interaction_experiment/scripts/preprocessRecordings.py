@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 
+# just replaces the dictionary of every line by the final dictionary, so there are no partial dictionaries
 
 def preprocessfile(file):
     last_dic = ''

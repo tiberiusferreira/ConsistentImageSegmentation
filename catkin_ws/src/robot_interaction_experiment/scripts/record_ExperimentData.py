@@ -11,7 +11,8 @@ import sys
 import joblib
 import os
 import time
-''' This script is used to record the data generated during the experiments so it can later be used for training.
+''' LEGACY! USE SPEECH_EMULATOR + imgseg.py + automatic_descriptor.py
+This script is used to record the data generated during the experiments so it can later be used for training.
 The recorded data is:
     The detected objects as published by the detected_objects_list topic
     Each object histograms: Shape / HoG / Color
