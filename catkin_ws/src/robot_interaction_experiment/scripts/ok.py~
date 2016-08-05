@@ -1,3 +1,0 @@
-import imageToObjects_online
-import myhog
-imageToObjects_online.mainn()

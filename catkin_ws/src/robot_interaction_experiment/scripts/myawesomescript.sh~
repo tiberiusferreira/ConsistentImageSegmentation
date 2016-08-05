@@ -1,4 +1,0 @@
-#!/bin/bash
-./clean.sh ; gnome-terminal --tab -e "bash -c 'cd /home/tiberio/catkin_ws/src/robot_interaction_experiment/scripts ; roslaunch publishRGB-Ddata.launch ; bash'" --tab -e "bash -c 'cd /home/tiberio/catkin_ws/src/robot_interaction_experiment/scripts ; python imageToObjects.py ; bash'" --tab -e "bash -c 'cd /home/tiberio/catkin_ws/src/robot_interaction_experiment/scripts ; python micro_frames_publisher.py ; bash'" --tab -e "bash -c 'cd /home/tiberio/catkin_ws/src/robot_interaction_experiment/scripts ; python speech_detector.py
- ; bash'" --tab -e "bash -c 'cd /home/tiberio/catkin_ws/src/robot_interaction_experiment/scripts ; python speech_recognizer.py ; bash'"
- 
