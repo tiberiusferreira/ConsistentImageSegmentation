@@ -17,7 +17,7 @@ n_colors = 80
 font_size = 20
 horz_dist = 100
 
-
+'''Code provided by Yuxin'''
 def NMF_dictionary_viewer(words_dictionary, hog_n_color, NMF_dictionary):
     
     n_words = len(words_dictionary)

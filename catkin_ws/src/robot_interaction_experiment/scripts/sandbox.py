@@ -6,6 +6,9 @@ import pylab as Plot
 from sklearn.decomposition import PCA
 from orientation import pca, features_based
 import os
+
+'''For testing new tecniques'''
+
 if __name__ == '__main__':
     # PREFIX = '../rapport_fig/'
     PREFIX = '../TST_RES/'

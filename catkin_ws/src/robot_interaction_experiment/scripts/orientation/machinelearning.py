@@ -43,7 +43,7 @@ TST_PATH = 'TST_IMGS/'
 PARTIAL_TST_PATH = 'PARTIAL_TST/'
 HoG_PATH = 'HOG_N_LABELS/HOG_N_LABELS.pickle'
 CLF_PATH = 'Classifier/clf.pkl'
-# clf = BaggingClassifier(svm.SVC(probability=True), n_estimators=division, max_samples=1.0/30)
+# clf = BaggingClassifier(svm.SVC(probability=True), n_estimators=2, max_samples=1.0/2)
 # clf = KNeighborsClassifier(n_neighbors=1000)
 # clf = svm.SVC(probability=True)
 clf = SGDClassifier(loss='log', random_state=10, shuffle=True)
@@ -149,9 +149,9 @@ def plot_2d_classes(value):
     nm_elements = int(raw_input('Plot this many elements (up to ' + str(len(labels)) + ') : '))
     new_labels = list()
     classes = np.unique(labels).tolist()
-    for labell in labels[:nm_elements]:
+    for single_label in labels[:nm_elements]:
         for unique_label in classes:
-            if unique_label == labell:
+            if unique_label == single_label:
                 new_labels.append(classes.index(unique_label))
     y = tsne.tsne(np.array(hog_list[:nm_elements]))
     plot.scatter(y[:, 0], y[:, 1], 20, new_labels)
@@ -263,7 +263,8 @@ def check_stability(objs_history):
             img_bgr8, center = obj_snapshot[obj]    # get a given obj in time
             one_obj_center_hist.append(center)      # append always the same obj from all time snapshots
         obj_center_list.append(one_obj_center_hist)
-    # for each object check if the distance between itself and it's other time snapshots are below a threshold
+    # for each object check if the distance between itself and it's other time snapshots are below a threshold (200 in
+    # this case)
     for obj in range(nb_obj):
         for one in range(nb_time_snapshots):
             x_one, y_one = obj_center_list[obj][one]
@@ -292,7 +293,9 @@ def setup():
         print ('Got a working classifier!')
     setup_done = True
 
-
+# gets called externally by the imgseg.py and gets the upright image rectangles and their center, saves
+# the new objects are saved in the obj_history which hold all the objects of 7 timeframes. Before going any further
+# the scene stability is tested (see if all objects are there and if they did not move much). Then it resized the images
 def objects_detector(uprightrects_tuples):
     global clf
     global saving_learn
@@ -310,12 +313,14 @@ def objects_detector(uprightrects_tuples):
         iterations += 1
     if 'obj_history' not in globals():
         obj_history = list()
+    # saves the new images and centers up to 7
     if len(obj_history) < 7:
         obj_history.append(uprightrects_tuples)
         return
     else:
         index_last_obj = iterations % 7
         obj_history[index_last_obj] = uprightrects_tuples
+    # if not stable, stop
     if check_stability(obj_history) == 0:
         return
     uprightrects_tuples = obj_history[2]
@@ -324,18 +329,23 @@ def objects_detector(uprightrects_tuples):
         img_bgr8, center = curr_tuple
         w, l, d = np.shape(img_bgr8)
         img_clean_bgr_learn = img_bgr8.copy()
+        # if it is saving as learn example for the classifier
         if saving_learn == 1:
             save_imgs_learn(img_clean_bgr_learn)
             return
+        # if using VGA resolution (shouldn't)
         if not using_VGA:
             img_bgr8 = img_bgr8[13:w - 5, 13:l - 8]
         else:
             img_bgr8 = img_bgr8[6:w - 2, 6:l - 4]
         img_clean_bgr_class = img_bgr8.copy()
+        # if saving as testing example
         if saving_test == 1:
             save_imgs_test(img_clean_bgr_class)
             return
+        # resize to a standard size
         img_clean_bgr_class = cv2.resize(img_clean_bgr_class, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
+        # reorientate if
         final, confiance = rotate_n_resize(img_clean_bgr_class)
         final_imgs.append(final)
     return final_imgs
@@ -357,7 +367,7 @@ def get_img_rot(img_bgr):
         img_bgr = cv2.warpAffine(img_bgr, m, (cols, rows))
     return best_rot, best_perc
 
-# calculates the img's HoG
+# calculates the img's HoG using OpenCVs implementation
 def get_img_hog(img_bgr):
     img_bgr = cv2.resize(img_bgr, (128, 128), interpolation=cv2.INTER_AREA)  # resize image
     opencv_hog = cv2.HOGDescriptor((128, 128), (b_size, b_size), (b_stride, b_stride), (c_size, c_size), n_bin)
@@ -442,12 +452,12 @@ def test_from_disk(value):
     print('Done')
 
 
-# Function used to try different HoG parameters
+# Function used to try different HoG parameters, not used anymore, here just for the record
 def big_test(value):
     global n_bin
-    global b_size  # Align to cell size
+    global b_size  # Needs to be align to cell size
     global c_size
-    global b_stride  # Multiple of cell size 8 8
+    global b_stride  # Needs to be multiple of cell size
     global labels
     global hog_list
     global label

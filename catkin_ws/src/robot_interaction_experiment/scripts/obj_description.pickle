@@ -1,16 +1,16 @@
 (lp0
-S'This is a cyan car'
+S'This is a cyan fish'
 p1
-aS'That is a cyan car'
+aS'That is a cyan fish'
 p2
-aS'Here we have a cyan car'
+aS'Here we have a cyan fish'
 p3
-aS'I can see a cyan car'
+aS'I can see a cyan fish'
 p4
-aS'In front of me there is cyan car'
+aS'In front of me there is cyan fish'
 p5
-aS'Here there is a car and its color is cyan'
+aS'Here there is a fish and its color is cyan'
 p6
-aS'I see a car and its color is cyan'
+aS'I see a fish and its color is cyan'
 p7
 a.

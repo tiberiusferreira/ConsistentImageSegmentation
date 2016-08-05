@@ -35,6 +35,10 @@ import orientation.automatic_descriptor
 # Constants max HoG size = 900  #
 ####################
 
+'''This is the main script used to segment the objects. It makes use of one of the scripts placed in the orientation folder
+ to find the proper image orientation.
+'''
+
 MAIN_WINDOW_NAME = 'Segmentator'
 RGB_WINDOW_NAME = 'RGB'
 DEPTH_WINDOW_NAME = 'DEPTH'
@@ -64,7 +68,7 @@ rgb_lock = threading.Lock()
 depth_lock = threading.Lock()
 treatment_lock = threading.Lock()
 
-
+# is called each time a new image is received by ROS
 def callback_rgb(msg):
     rgb_lock.acquire()
     global clr_timestamp, img_bgr8_clean, using_VGA
@@ -88,29 +92,39 @@ def callback_rgb(msg):
     rgb_lock.release()
 
 
+# is called each time a new depth image is received by ROS
 def callback_depth(msg):
     depth_lock.acquire()
     # treating the image containing the depth data
-    global depth_img_avg, depth_timestamp, clr_timestamp
+    global depth_img_avg, depth_timestamp, clr_timestamp, last_depth_imgs
     # getting the image
+    if 'last_depth_imgs' not in globals():
+        last_depth_imgs = list()
     try:
         img = CvBridge().imgmsg_to_cv2(msg, "passthrough")
     except CvBridgeError as e:
         print(e)
         return
+    # removing eventual nan values
     cleanimage = clean_inf_n_nan(img, 255)
     if clr_timestamp == 0:
         depth_lock.release()
         return
     height, width, depth = np.shape(img_bgr8_clean)
+    # getting color and depth to the same size
     cleanimage = cv2.resize(cleanimage, (width, height))
-    # last_depth_imgs.append(copy.copy(cleanimage))
-    # depth_img_avg = np.array([sum(e) / len(e) for e in zip(*last_depth_imgs)])
-    # print ('depth_img_avg = ' + str(np.shape(depth_img_avg)))
-    # if len(last_depth_imgs) == 1:
-    #     last_depth_imgs = list()
-    depth_img_avg = cleanimage
-    # depth_img_index += 1
+    # saving a history of depth images and taking the average of 4 of them as the final one
+    # cant do better than that because the color and depth images are not well syncronized
+    last_depth_imgs.append(copy.copy(cleanimage))
+    if len(last_depth_imgs) > 4:
+        last_depth_imgs = last_depth_imgs[1:]
+    else:
+        depth_lock.release()
+        return
+    depth_img_avg = np.zeros(np.shape(last_depth_imgs[0]), dtype=np.float32)
+    for depth_img in last_depth_imgs:
+        depth_img_avg += depth_img
+    depth_img_avg /= 4
     depth_timestamp = msg.header.stamp
     depth_lock.release()
 
@@ -146,7 +160,7 @@ def clean_inf_n_nan(img, n):
     #  where mask puts img, else puts n, so where is finite puts img, else puts n
     return np.where(mask, img, n)
 
-
+# prompts the user to select a part of the image in which all the calculations will be done
 def cut_working_area(clr_img, depth_img):
     global refPt
     if 'refPt' not in globals():
@@ -165,6 +179,7 @@ def cut_working_area(clr_img, depth_img):
     return clr_img, depth_img
 
 
+# checks if the images received are actually new images using timestamps
 def new_imgs():
     global depth_timestamp, clr_timestamp, last_clr_timestamp, last_depth_timestamp, depth_img_avg
     if not depth_timestamp == 0 and not clr_timestamp == 0 and not clr_timestamp == last_clr_timestamp and not \
@@ -175,7 +190,7 @@ def new_imgs():
     else:
         return False
 
-
+# shows depth and color images if needed
 def show_imgs():
     if show_color:
         cv2.imshow(RGB_WINDOW_NAME, cv2.resize(img_bgr8_clean, (480, 512)))
@@ -188,7 +203,9 @@ def show_imgs():
     else:
         cv2.destroyWindow(DEPTH_WINDOW_NAME)
 
-
+# gets the useful img area as selected by the user, checks if it contains any useful contours (which resembles a cube),
+# finds cubes, prerotates them so at least one side is aligned horizontally and then passes it to a function so it can
+# be rotated into an appropriate position
 def begin_treatment():
     treatment_lock.acquire()
     show_imgs()
@@ -196,9 +213,11 @@ def begin_treatment():
     if not new_imgs():
         treatment_lock.release()
         return
+    # work only on the area the user selected
     clr, dpht = cut_working_area(img_bgr8_clean.copy(), depth_img_avg.copy())
     cv2.imshow('Working Area', clr)
     cv2.waitKey(1)
+    # find the appropriate contours (which resembles a cube)
     useful_cnts = find_cnts_in_depth(dpht)
     if useful_cnts is None:
         treatment_lock.release()
@@ -207,6 +226,7 @@ def begin_treatment():
     if imgs_n_centers is None:
         treatment_lock.release()
         return
+    # debugging code
     if 'show_imgs_n_centers_dbg' in globals():
         if show_imgs_n_centers_dbg:
             imgs_n_centers_dbg = prerotate_cubes_n_get_center(useful_cnts, clr.copy(), False)
@@ -221,7 +241,7 @@ def begin_treatment():
     orientate_imgs(imgs_n_centers)
     treatment_lock.release()
 
-
+# returns one image from the tuple
 def only_get_one_img(imgs_n_centers):
     if imgs_n_centers is None:
         return
@@ -231,6 +251,7 @@ def only_get_one_img(imgs_n_centers):
         return img_bgr8_copy
 
 
+# returns the HoG image obtained using Sklearns lib
 def get_img_hog(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.resize(img, (80, 80), interpolation=cv2.INTER_AREA)
@@ -244,9 +265,8 @@ def get_img_hog(img):
 
 
 def orientate_imgs(imgs_n_centers):
-    global got_speech
     # Does not really work, just to visualize 'why' is does not work and maybe expand it
-    # min_area_triang.objects_detector(imgs_n_centers)
+    # min_area_triang.objects_detector(only_get_one_img(imgs_n_centers))
 
     # Here is the PCA approach
     # Apply only the PCA rotation (narrows the image to 2 possible position, may be upside down)
@@ -258,11 +278,19 @@ def orientate_imgs(imgs_n_centers):
     # or resolve it using the number of contour points in its up or down side.
     # img_90 = features_based.countourpnts_up(img_180)
 
+    # using machine learning, this is the method that actually works
     final_imgs = machinelearning.objects_detector(imgs_n_centers)
-    if final_imgs is None or len(final_imgs) == 0:
+    send_imgs(final_imgs)
+
+
+# actually sends the images to ROS using the detected objects message, only sends if a speech is detected
+# also dumps a file containing sentences describing the current objs being shown (only works with one object at a time)
+def send_imgs(img_list):
+    global got_speech
+    if img_list is None or len(img_list) == 0:
         return
     detected_objects_list = list()
-    for index, img in enumerate(final_imgs):
+    for index, img in enumerate(img_list):
         cv2.imshow('Img ' + str(index), img)
         rows, cols, d = img.shape
         detected_object = Detected_Object()
@@ -277,21 +305,17 @@ def orientate_imgs(imgs_n_centers):
         detected_object.features.colors_histogram = colors_histo.tolist()
         # detected_object.features.shape_histogram = object_shape.tolist()
         detected_objects_list.append(detected_object)
+        # here dumps the sentences describing the shown object (only works with one object at a time and a known object)
         orientation.automatic_descriptor.automatic_descriptor(orientation.machinelearning.label_pred(img), detected_object)
-    #         if recording == 1:
-    #             cv2.imshow('Just Sent' + str(index), final)
-    #
-    # # if got_speech == 0:
-    # #     return
-    # if loaded_clf:
     if got_speech == 0:
         return
     detected_objects_list_publisher.publish(detected_objects_list)
     got_speech = 0
 
-'''
-Callback from the audio related topic. Receives the current dictionary, words histogram and last spoken words (speech).
-'''
+
+# Callback from the audio related topic. Receives the current dictionary, words histogram and last spoken words (speech)
+# also sets a flag so the program is aware that a valid audio was recorded.
+
 
 
 def callback_audio_recognition(words):
@@ -303,6 +327,7 @@ def callback_audio_recognition(words):
     got_speech = 1
 
 
+# gets the coordinates of the rectangle indicating the selected working are by the user
 def click_and_crop(event, x, y, flags, param):
     # grab references to the global variables
     global refPt
@@ -318,10 +343,11 @@ def click_and_crop(event, x, y, flags, param):
         # the cropping operation is finished
         refPt.append((x, y))
 
-
+# actually filters the contours, checking if they resemble cubes
 def filter_cnts(cnt_list):
     global using_VGA
     useful_cnts = list()
+    # uses area and length to filter
     for cnt in cnt_list:
         if not using_VGA:
             if MIN_AREA < cv2.contourArea(cnt) < MAX_AREA:
@@ -349,21 +375,26 @@ def filter_cnts(cnt_list):
     return useful_cnts
 
 
+# gets cubes contours from useful_cnts, finds a minimal area bounding box and rotates it so a side is aligned
+# horizontally
 def prerotate_cubes_n_get_center(useful_cnts, clr_copy, draw_cnts_n_box):
     uprightrects_tuples = list()
+    # for each contour
     for index, cnts in enumerate(useful_cnts):
         min_area_rect = cv2.minAreaRect(cnts)  # minimum area rectangle that encloses the contour cnt
-        (center, size, angle) = cv2.minAreaRect(cnts)
+        (center, size, angle) = cv2.minAreaRect(cnts)   # get the rectangle dimensions
         width, height = size[0], size[1]
-        if not (0.65 * height < width < 1.35 * height):
+        if not (0.65 * height < width < 1.35 * height):  # filter contours which do not resemble rectangles
             print("Wrong Height/Width: " + str(0.65 * height) + " < " + str(width) + " < " + str(1.35 * height))
             continue
         points = cv2.boxPoints(min_area_rect)  # Find four vertices of rectangle from above rect
         points = np.int32(np.around(points))  # Round the values and make it integers
-        if draw_cnts_n_box:
+        if draw_cnts_n_box: # draw the bounding box if necessary
             cv2.drawContours(clr_copy, [points], 0, (0, 0, 255), 2)
             cv2.drawContours(clr_copy, cnts, -1, (255, 0, 255), 2)
-        # if we rotate more than 90 degrees, the width becomes height and vice-versa
+        # if we the angle goes below -45 rotate it 90 degrees and ajust width and height to reflect it
+        # this is because OpenCV only considers values from -90 to 0 for the rotation, so this is a way to
+        # keep track of a wider range of rotations
         if angle < -45.0:
             angle += 90.0
             width, height = size[0], size[1]
@@ -371,9 +402,11 @@ def prerotate_cubes_n_get_center(useful_cnts, clr_copy, draw_cnts_n_box):
         rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
         # rotate the entire image around the center of the parking cell by the
         # angle of the rotated rect
+        # get dimmensions of the image
         imgwidth, imgheight = (clr_copy.shape[0], clr_copy.shape[1])
+        # actually rotate it
         rotated = cv2.warpAffine(clr_copy, rot_matrix, (imgheight, imgwidth), flags=cv2.INTER_CUBIC)
-        # extract the rect after rotation has been done
+        # extract the rectangle after rotation has been done
         sizeint = (np.int32(size[0]), np.int32(size[1]))
         uprightrect = cv2.getRectSubPix(rotated, sizeint, center)
         uprightrect = cv2.resize(uprightrect, (125, 125))
@@ -389,40 +422,47 @@ def find_cnts_in_depth(depth):
     # resize the depth image so it matches the color one
     depth_copy = copy.copy(depth)
     closest_pnt = np.amin(depth)
-    old = True
-    if old:
+    stable = True
+    if stable:
         img_detection = np.where(depth_copy < closest_pnt + val_depth_capture, depth_copy, 0)
-        # put all the pixels greater than 0 to 255
+        # put all the pixels greater than 0 to 255 to facilitate the contour extraction
         ret, mask = cv2.threshold(img_detection, 0.0, 255, cv2.THRESH_BINARY)
         # convert to 8-bit
         mask = np.array(mask, dtype=np.uint8)
-        im2, contours, hierarchy = cv2.findContours(mask, 1, 2, offset=(0, -6))
+        # actually find the contours
+        im2, contours, hierarchy = cv2.findContours(mask, 1, 2, offset=(0, -6)) # offset because the depth image is a
+        # a bit offset in respect to the color image
         if len(contours) == 0:
             return None
+        # filter contours
         useful_cnts = filter_cnts(contours)
         if len(useful_cnts) == 0:
             return None
         return useful_cnts
     else:
+        # here the idea is to use ranges of the depth image instead of just one range as in the method above
+        # the ranges are in this form [closest detected point, X], [X-y, X2]...
+        # Ex: [0.1, 0.3], [0.2, 0.5]...
         useful_cnts = list()
+        overlap = 0.01
+        # [0, 0.3
         for lower in np.arange(closest_pnt, closest_pnt + 0.20, 0.03):
+            # get all points lower than the starting point (lower) plus a range (val_depth_capture)
             img_detection = np.where(depth_copy < lower + val_depth_capture, depth_copy, 0)
-            img_detection = np.where(img_detection > lower, img_detection, 0)
+            # get all points greater than lower minus the overlap between ranges
+            img_detection = np.where(img_detection > lower - overlap, img_detection, 0)
             # put all the pixels greater than 0 to 255
             ret, mask = cv2.threshold(img_detection, 0.0, 255, cv2.THRESH_BINARY)
             # convert to 8-bit
             mask = np.array(mask, dtype=np.uint8)
-            # cv2.imshow('Depth', mask)
-            # cv2.waitKey(0)
             im2, contours, hierarchy = cv2.findContours(mask, mode=cv2.RETR_LIST, method=cv2.CHAIN_APPROX_SIMPLE,
                                                         offset=(0, -6))
             if len(contours) == 0:
                 continue
             contours = filter_cnts(contours)
             useful_cnts.extend(contours)
-
     #   checking for nested contours
-    # TODO: get the contour with biggest area when nested
+    # TODO: which contour to get when they are nested ?
     singular_cnts = list()
     if len(useful_cnts) > 0:
         for new_cnts in useful_cnts:    # for all contours
@@ -440,16 +480,13 @@ def find_cnts_in_depth(depth):
                 singular_cnts.append(new_cnts)
 
     useful_cnts = singular_cnts
-
-    # else:
-    # if len(useful_cnts) == 0:
-    #     return None
     return useful_cnts
 
 
 def getpixelfeatures(object_img_bgr8):
-
+    # resize images to the value Yuxin uses in his program
     object_img_bgr8 = cv2.resize(object_img_bgr8, (40, 40))
+    # remove the white pixels by filtering all values with saturation lower than 100
     object_img_hsv = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2HSV)
     new_hue = list()
     x, y, d = np.shape(object_img_hsv)
@@ -458,7 +495,9 @@ def getpixelfeatures(object_img_bgr8):
         for i2 in range(y):
             if object_img_hsv[i, i2, 1] > 100:
                 new_hue.append(object_img_hsv[i, i2, 0])
+    # generate the color histogram
     colors_histo, histo_bins = np.histogram(new_hue, bins=n_colors, range=(0, 179), density=True)
+    # code provided by Yuxin, basically smooths the histogram so it resembles a gaussian
     half_segment = int(N_COLORS / 4)
     middle = colors_histo * np.array([0.0] * half_segment + [1.0] * 2 * half_segment + [0.0] * half_segment)
     sigma = 2.0
@@ -469,9 +508,11 @@ def getpixelfeatures(object_img_bgr8):
     colors_histo = middle + np.append(exterior[2 * half_segment:], exterior[0:2 * half_segment])
     object_shape = cv2.cvtColor(object_img_bgr8, cv2.COLOR_BGR2GRAY)
     object_shape = np.ndarray.flatten(object_shape)
-    sum = float(np.sum(object_shape))
-    if sum != 0:
-        object_shape /= float(np.sum(object_shape))
+    sum_shape = float(np.sum(object_shape))
+    if sum_shape != 0:
+        # wanted to replace with augmented assignment, but the float conversion has unexpected results in some python
+        # versions if that is done
+        object_shape = object_shape/float(np.sum(object_shape))
     features = Vision_Features()
     features.colors_histogram = colors_histo
     features.shape_histogram = object_shape
@@ -493,8 +534,9 @@ if __name__ == '__main__':
     try:
         while not rospy.core.is_shutdown():
             begin_treatment()
+            # prevents some windows from not showing if waitKey is forgot
             cv2.waitKey(1)
     except KeyboardInterrupt:
         print("Shutting down")
-        exit(1)
         cv2.destroyAllWindows()
+        exit(1)

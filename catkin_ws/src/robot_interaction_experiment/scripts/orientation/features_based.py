@@ -5,6 +5,7 @@ import pca
 
 # gets an bgr8 image and returns how many sifts are in (upright, upleft, downright, downleft) parts of the image
 def sifts_location(img_bgr8, use_response):
+    # use response replaces the pure sift number count for the sift response
     gray = cv2.cvtColor(img_bgr8, cv2.COLOR_BGR2GRAY)
     row, col = np.shape(gray)
     sift = cv2.xfeatures2d.SIFT_create()
@@ -27,7 +28,7 @@ def sifts_location(img_bgr8, use_response):
     return upright, upleft, downright, downleft
 
 # gets a thresholded image in bgr8 and returns how many points are in (upright, upleft, downright, downleft)
-# parts of the image
+# parts of the image. The image is expected to be black with white points.
 def countourpnts_location(img_bgr8):
     gray = cv2.cvtColor(img_bgr8, cv2.COLOR_BGR2GRAY)
     row, col = np.shape(gray)
@@ -75,28 +76,10 @@ def countourpnts_up(img_bgr8):
     return img_bgr8
 
 
+# detects and draws sift points on the image
 def draw_sift(img):
     sift = cv2.xfeatures2d.SIFT_create()
     kp = sift.detect(img, None)
     img_cp = img.copy()
     cv2.drawKeypoints(img, kp, img_cp)
     return img_cp
-#
-#     print ('\n')
-#     # print (len(kp))
-#     # print (up)
-#     # print (down)
-#     print('Up right = '+ str(upright))
-#     print('Up left = ' + str(upleft))
-#     print('Down right = ' + str(downright))
-#     print('Down left = ' + str(downleft))
-#     # if up> down:
-#     #     print ('Up ' + str(up-down))
-#     # else:
-#     #     print ('Down ' + str(down-up))
-#     # print (len(kp))
-#     # print (angle/len(kp))
-#     cv2.drawKeypoints(img, kp, img)
-#     cv2.imshow('After', img)
-#     cv2.waitKey(0)
-# cv2.waitKey(0)

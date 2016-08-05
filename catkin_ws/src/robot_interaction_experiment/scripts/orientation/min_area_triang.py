@@ -19,16 +19,12 @@ lastpoints = np.zeros((NUMBER_LAST_POINTS, 3, 2))
 
 
 '''Using only one image to make it easier to visualize and minimize output'''
-def objects_detector(uprightrects_tuples):
+def objects_detector(img):
     global average_points
     # just taking the last image instead of all
-    if uprightrects_tuples is None:
-        return
-    for index, curr_tuple in enumerate(uprightrects_tuples):
-        img_bgr8, center = curr_tuple
-        img_bgr8_copy = img_bgr8.copy()
+    img_cp = copy.copy(img)
     # 1-Convert to HSV space in order to let pass only the vivid colors
-    hsv = cv2.cvtColor(img_bgr8_copy, cv2.COLOR_RGB2HSV)
+    hsv = cv2.cvtColor(img_cp, cv2.COLOR_RGB2HSV)
     # define the values range in which to filter
     hh = 255
     hl = 0

@@ -10,6 +10,7 @@ import numpy as np
 import sys
 import joblib
 
+# Parses the file and extracts the dictionary, HoG, Color Histogram and words describing each object
 def create_hist_matrix(file):
     lines_since_obj = -1000000
     global matrice_hist
@@ -18,13 +19,17 @@ def create_hist_matrix(file):
     global dict
     dict= list()
     got_dic = 0
+    # Here the HoG, Color, Words are concatenated into a "line" and then those lines are put in a list (matrice_hist)
+    # this is because the tool provided by Yuxin uses this format
     for line_num, line in enumerate(file):
         if lines_since_obj == 1 and got_dic == 0:
+            # getting the dictionary
             for string in line.strip().split(', '):
                 dict.append(string)
                 got_dic = 1
         if lines_since_obj == 4 or lines_since_obj == 5 or lines_since_obj == 6:  # Respectively HoG, Color and Words
             hog_cont = 0
+            # getting the HoG, Color and Words
             for string in line.strip().split(', '):
                 string = float(string)
                 concat.append(string)
@@ -34,6 +39,7 @@ def create_hist_matrix(file):
                     concat.append(0)
                     hog_cont += 1
         lines_since_obj += 1
+        # checks the moment of apparition of #Object to keep track of where one object ends and the other begins
         if '#Object' in line:
             if concat:
                 matrice_hist.append(concat)
@@ -61,17 +67,17 @@ if __name__ == '__main__':
     create_hist_matrix(f)
     global matrice_hist
     matrice_hist = np.array(matrice_hist)
+    # values given by Yuxin for the size of the HoG and Color histogram
     n_hog = 900
     n_color = 80
-
-    ####  to record the img before each training  ########
     global dict
-
     words_dictionary_visual = dict
     Xres = matrice_hist
-    # print matrice_hist
+    # loads the HoG and color images from a pickle file (which stores a python variable serialized)
     hog_n_color = joblib.load(sys.argv[1] + '/hog_n_color.pickle')
 
+    # code provided by Yuxin
+    # reshapes the data so the View_tool script reads it properly
     NMF_dictionary_visual = np.array([np.array([Xres[0, n_hog:n_color + n_hog],
                                                 Xres[0, n_color + n_hog:]])])
     for i in range(1, len(Xres)):

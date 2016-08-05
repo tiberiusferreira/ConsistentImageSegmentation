@@ -12,12 +12,13 @@ import time
 import os
 import pickle
 
-
+# gets the detected object, its label, guesses its color and outputs sentences describing it
 def automatic_descriptor(label, detected_object):
     clr_hist = detected_object.features.colors_histogram
     clr_index = clr_hist.index(max(clr_hist))
     color = ''
     label = str(label)
+    # guess the object color depending on where its color histogram peak is
     if 0 <= clr_index <= 12:
         color = 'yellow'
     elif 12 < clr_index <= 30:
@@ -32,6 +33,7 @@ def automatic_descriptor(label, detected_object):
         color = 'red'
     color = str(color)
     label_n_clr = str(color) + ' ' + str(label)
+    # create phrases describing it
     sentence_structs = list()
     sentence_structs.append('This is a ' + label_n_clr)
     sentence_structs.append('That is a ' + label_n_clr)
@@ -43,7 +45,10 @@ def automatic_descriptor(label, detected_object):
     filename = 'obj_description.pickle'
     if not os.path.isfile('obj_description.pickle'):
         with open(filename, 'w') as f:
+            # record thoses phrases into a file so the imgseg.py send_imgs function reads it, publishes the object
+            # and its description and deletes the pickle file after
             pickle.dump(sentence_structs, f)
+
 
 
 
