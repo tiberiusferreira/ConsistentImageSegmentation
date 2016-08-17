@@ -15,16 +15,22 @@ import os, pickle, copy
 # publishes the given words describing the image
 def send_words(words):
     global repeated_dic
+    # complete words = not the repeated ones, just the phrase as received
     audio.complete_words = words
     repeated_dic.extend(words)
-    _, idx = np.unique(repeated_dic, return_index=True)
+    _, idx = np.unique(repeated_dic, return_index=True)  # gets index of unique elements
     repeated_dic = np.array(repeated_dic)
-    audio.words_dictionary = repeated_dic[np.sort(idx)]
+    audio.words_dictionary = repeated_dic[np.sort(idx)]  # sorts it so there is no random order
     repeated_dic = repeated_dic.tolist()
-    dictionary = np.zeros(len(audio.words_dictionary))
-    for words in audio.words_dictionary:
-        dictionary[audio.words_dictionary.tolist().index(words)] = Counter(repeated_dic)[words]
+    dictionary = np.zeros(len(audio.words_dictionary))  # the histogram is of the size of the dictionary
+    for words in audio.words_dictionary:    # go through all the dictionary words and see which ones were spoken in
+                                            # the sentence. Only those are to be in the histogram
+        dictionary[audio.words_dictionary.tolist().index(words)] = Counter(audio.complete_words)[words]
     audio.words_histogram = dictionary
+    print ('Dict:')
+    print (audio.words_dictionary)
+    print ('histogram:')
+    print (dictionary)
     time.sleep(0.4)
     object_pub.publish(audio)
 
