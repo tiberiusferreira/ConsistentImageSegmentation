@@ -26,9 +26,10 @@ def NMF_dictionary_viewer(words_dictionary, hog_n_color, NMF_dictionary):
     
     K = len(NMF_dictionary)
     img = np.zeros((80 + img_size + max_histogram_size  + font_size * n_words, 10 + (horz_dist + 10) * K + 10, 3), dtype=np.uint8)
-
+    words_histogram = 0
     for Ki, NMF_histogram in enumerate(NMF_dictionary):
-        colors_histogram, words_histogram = NMF_histogram
+        colors_histogram, words_histogram_new = NMF_histogram
+        words_histogram += words_histogram_new
         hog_img, color_img = hog_n_color[Ki]
         hog_img = cv2.cvtColor(hog_img, cv2.COLOR_GRAY2BGR)
         hog_img = cv2.resize(hog_img, (img_size, img_size))

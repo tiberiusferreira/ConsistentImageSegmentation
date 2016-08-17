@@ -27,6 +27,7 @@ def create_hist_matrix(file):
             for string in line.strip().split(', '):
                 dict.append(string)
                 got_dic = 1
+
         if lines_since_obj == 4 or lines_since_obj == 5 or lines_since_obj == 6:  # Respectively HoG, Color and Words
             hog_cont = 0
             # getting the HoG, Color and Words
@@ -84,7 +85,7 @@ if __name__ == '__main__':
         values = np.array([np.array([Xres[i, n_hog:n_color + n_hog],
                                      Xres[i, n_color + n_hog:]])])
         NMF_dictionary_visual = np.vstack([NMF_dictionary_visual, values])
-
+    print (words_dictionary_visual)
     img_iteration = NMF_dictionary_viewer(words_dictionary_visual, hog_n_color, NMF_dictionary_visual)
     cv2.imshow('Img', img_iteration)
     cv2.waitKey(0)
